@@ -23,32 +23,31 @@ instructions are repeated below.
 
 ## 2 Directory layout
 
-
-├── best_parameter/                   # Best-fit θ for each city (MAT files)
-│   ├── Chengdu.mat
-│   ├── Kashgar.mat
-│   └── Qingdao.mat
-├── cascades/                         # Three benchmark cascades extracted from
-│   ├── Chengdu_out.csv               #   Weibo-COV; only the “created_at” column
-│   ├── Kashgar_out.csv               #   is retained
-│   └── Qingdao_out.csv
-├── CMA-PSO-LSQ_pipeline/             # End-to-end fitting pipeline
-│   ├── Chengdu_ode_pipeline_wtNLL.m
-│   ├── Kashgar_ode_pipeline_wtNLL.m
-│   └── Qingdao_ode_pipeline_NLL.m
-├── ode_check/                        # Quick plotting scripts using the best θ
-│   ├── ode_final_check_chengdu.m
-│   ├── ode_final_check_kashgar.m
-│   └── ode_final_check_qingdao.m
-├── rhythm/                           # Raw & processed rhythm data
-│   ├── posts_uidp.parquet            # 8.7 M posts (text stripped, IDs randomised)
-│   ├── posts_uidp_interpolation_alignment.parquet
-│   ├── posts_uidp_interpolation_alignment_bucket_count_2h.csv
-│   └── posts_uidp_interpolation_alignment_spline_pp.mat
-└── sensitivity_analysis/             # PRCC, Sobol, ST-index
-├── ode_check_final_prcc.m
-├── ode_check_final_S1_ST.m
-└── ode_check_final_sobol_dynamic.m
+```text
+best_parameter/                 # best-fit θ for each city (MAT)
+    Chengdu.mat
+    Kashgar.mat
+    Qingdao.mat
+cascades/                       # benchmark cascades (timestamps only)
+    Chengdu_out.csv
+    Kashgar_out.csv
+    Qingdao_out.csv
+CMA-PSO-LSQ_pipeline/           # end-to-end fitting pipeline
+    Chengdu_ode_pipeline_wtNLL.m
+    Kashgar_ode_pipeline_wtNLL.m
+    Qingdao_ode_pipeline_NLL.m
+ode_check/
+    ode_final_check_chengdu.m
+    ode_final_check_kashgar.m
+    ode_final_check_qingdao.m
+rhythm/
+    posts_uidp_interpolation_alignment_bucket_count_2h.csv
+    posts_uidp_interpolation_alignment_spline_pp.mat
+sensitivity_analysis/
+    ode_check_final_prcc.m
+    ode_check_final_S1_ST.m
+    ode_check_final_sobol_dynamic.m
+```
 
 ---
 
@@ -67,10 +66,11 @@ This will
 
 Run the analogous script for Kashgar or Qingdao to replicate all results in the
 paper.
+```
 
 ⸻
 
-4 Requirements
+## 4 Requirements
 
 software	version
 MATLAB	R2024b (earlier 2023a-2024a work but not tested exhaustively)
@@ -81,7 +81,7 @@ Optimization).
 
 ⸻
 
-5 Data provenance & privacy
+## 5 Data provenance & privacy
 	•	posts_uidp.parquet contains timestamps and numerical metadata only.
 Original text, screen names, profile URLs etc. have been permanently removed.
 	•	The column uid_rand is a cryptographically random, one-way mapping of the original
@@ -96,7 +96,7 @@ This design satisfies the “irreversible anonymisation” requirement of China 
 
 ⸻
 
-6 How to cite
+## 6 How to cite
 
 Data DOI: coming soon
 Code DOI  : 10.5281/zenodo.15378207   (this repository, version v1.0.0)
@@ -106,14 +106,14 @@ A full citation string will appear here once the Zenodo (code) and Mendeley Data
 
 ⸻
 
-7 Licence
+## 7 Licence
 	•	Data — Creative Commons CC BY-NC 4.0
 (share alike, non-commercial, keep attribution)
 	•	Code — MIT License
 
 ⸻
 
-8 Contact
+## 8 Contact
 
 Questions, bug reports or suggestions → Yushi Sun
 sun-yushi@outlook.com
