@@ -68,7 +68,7 @@ Run the analogous script for Kashgar or Qingdao to replicate all results in the
 paper.
 ```
 
-⸻
+---
 
 ## 4 Requirements
 
@@ -79,7 +79,7 @@ optional Python	≥ 3.9, only needed if you wish to regenerate rhythm/ from the 
 All MATLAB scripts are self-contained (no toolboxes beyond Statistics and
 Optimization).
 
-⸻
+---
 
 ## 5 Data provenance & privacy
 	•	posts_uidp.parquet contains timestamps and numerical metadata only.
@@ -94,7 +94,7 @@ Obtain the full corpus from the original authors if you need text or user fields
 This design satisfies the “irreversible anonymisation” requirement of China PIPL and the
 “pseudonymisation” guidance (EDPB 01/2025).
 
-⸻
+---
 
 ## 6 How to cite
 
@@ -104,21 +104,17 @@ Code DOI  : 10.5281/zenodo.15378207   (this repository, version v1.0.0)
 A full citation string will appear here once the Zenodo (code) and Mendeley Data
 (dataset) records are registered.
 
-⸻
+---
 
 ## 7 Licence
 	•	Data — Creative Commons CC BY-NC 4.0
 (share alike, non-commercial, keep attribution)
 	•	Code — MIT License
-
-⸻
+	
+---
 
 ## 8 Contact
 
 Questions, bug reports or suggestions → Yushi Sun
 sun-yushi@outlook.com
-
-⸻
-
-Last updated: 2025-05-10
 
