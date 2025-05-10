@@ -1,4 +1,5 @@
 # RhP–SEIRS Weibo Dataset & Reproduction Pipeline  
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15378207.svg)](https://doi.org/10.5281/zenodo.15378207)
 *(companion artefact to the manuscript “Rhythm-modulated epidemic-like diffusion on social media”)*
 ---
 
@@ -98,7 +99,7 @@ This design satisfies the “irreversible anonymisation” requirement of China 
 6 How to cite
 
 Data DOI: coming soon
-Code DOI: coming soon
+Code DOI  : 10.5281/zenodo.15378207   (this repository, version v1.0.0)
 
 A full citation string will appear here once the Zenodo (code) and Mendeley Data
 (dataset) records are registered.
