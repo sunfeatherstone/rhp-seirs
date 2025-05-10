@@ -1,6 +1,6 @@
 # RhP–SEIRS Weibo Dataset & Reproduction Pipeline  
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15378207.svg)](https://doi.org/10.5281/zenodo.15378207)
-*(companion artefact to the manuscript “Rhythm-modulated epidemic-like diffusion on social media”)*
+[![Data DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15378372.svg)](https://doi.org/10.5281/zenodo.15378372)
 ---
 
 ## 1 Project overview
@@ -98,7 +98,7 @@ This design satisfies the “irreversible anonymisation” requirement of China 
 
 ## 6 How to cite
 
-Data DOI: coming soon
+Data DOI  : 10.5281/zenodo.15378372   (300 MB parquet, all versions)
 Code DOI  : 10.5281/zenodo.15378207   (this repository, version v1.0.0)
 
 A full citation string will appear here once the Zenodo (code) and Mendeley Data
@@ -110,7 +110,7 @@ A full citation string will appear here once the Zenodo (code) and Mendeley Data
 	•	Data — Creative Commons CC BY-NC 4.0
 (share alike, non-commercial, keep attribution)
 	•	Code — MIT License
-	
+
 ---
 
 ## 8 Contact
