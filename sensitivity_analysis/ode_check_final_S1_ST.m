@@ -1,5 +1,4 @@
 clear functions
-
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -153,7 +152,7 @@ tbl  = readtable(weibo_file);
 bucketMin = 30;
 S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
-F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
+F_base = @(tau) ppval(pp, mod(tau, 84));  
 F_hour = @(t_hr) F_base(t_hr/2);
 t30 = (0:0.5:167.5)';          % 336 × 1
 ts = datetime(tbl.created_at,'InputFormat','yyyy-MM-dd HH:mm:ss');
@@ -200,7 +199,7 @@ sobB = scramble(sobolset(P,'Skip',2000,'Leap',200),'MatousekAffineOwen');
 
 A = net(sobA,N);           % N×P
 B = net(sobB,N);
-epsRange = 0.20;  logL = log(1-epsRange);  logH = log(1+epsRange);
+epsRange = 0.5;  logL = log(1-epsRange);  logH = log(1+epsRange);
 
 ThetaA = repmat(theta_refined,N,1);
 ThetaB = repmat(theta_refined,N,1);
@@ -225,29 +224,66 @@ calc_metric = @(lam) deal( ...
                         lam(day_idx_const<=5), [5,1], ...
                         @(v)sum(maxk(v,min(2,numel(v)))), 0) ), ...
         sum(lam) );
-Y1_A = zeros(N,1);  Y2_A = zeros(N,1);
-Y1_B = zeros(N,1);  Y2_B = zeros(N,1);
-Y1_M = zeros(N,P);  Y2_M = zeros(N,P);
 
-for n = 1:N
-    [Y1_A(n),Y2_A(n)] = calc_metric( forward(ThetaA(n,:),F,T,dt_hr,false) );
-    [Y1_B(n),Y2_B(n)] = calc_metric( forward(ThetaB(n,:),F,T,dt_hr,false) );
-end
-for i = 1:P
+cacheFile = fullfile('sensitivity_analysis','sobol_Y_sample.mat');  
+if ~isfolder(fileparts(cacheFile)), mkdir(fileparts(cacheFile)); end
+
+if isfile(cacheFile)
+    load(cacheFile, ...
+        'Y1_A','Y2_A','Y1_B','Y2_B','Y1_M','Y2_M', ... 
+        'ThetaA','ThetaB','ThetaMix','meta');          
+else
+    Y1_A = zeros(N,1);  Y2_A = zeros(N,1);
+    Y1_B = zeros(N,1);  Y2_B = zeros(N,1);
+    Y1_M = zeros(N,P);  Y2_M = zeros(N,P);
+
     for n = 1:N
-        [Y1_M(n,i),Y2_M(n,i)] = calc_metric( forward(ThetaMix{i}(n,:),F,T,dt_hr,false) );
+        [Y1_A(n),Y2_A(n)] = calc_metric( forward(ThetaA(n,:),F,T,dt_hr,false) );
+        [Y1_B(n),Y2_B(n)] = calc_metric( forward(ThetaB(n,:),F,T,dt_hr,false) );
     end
+
+    for i = 1:P
+        for n = 1:N
+            [Y1_M(n,i),Y2_M(n,i)] = calc_metric( forward(ThetaMix{i}(n,:),F,T,dt_hr,false) );
+        end
+    end
+    meta = struct('N',N,'P',P,'timestamp',datetime); 
+    save(cacheFile, ...
+         'Y1_A','Y2_A','Y1_B','Y2_B','Y1_M','Y2_M', ...
+         'ThetaA','ThetaB','ThetaMix','meta', ...
+         '-v7.3'); 
 end
+
+
 VarY1 = var([Y1_A;Y1_B],1);
 VarY2 = var([Y2_A;Y2_B],1);
 S1 = zeros(P,2);   ST = zeros(P,2);
-
+S1_conf = zeros(P,2);  ST_conf = zeros(P,2);
 for i = 1:P
-    S1(i,1) = mean( Y1_B .* (Y1_M(:,i)-Y1_A) ) / VarY1;       % Top-2
-    S1(i,2) = mean( Y2_B .* (Y2_M(:,i)-Y2_A) ) / VarY2;
-    ST(i,1) = 0.5*mean( (Y1_A - Y1_M(:,i)).^2 ) / VarY1;
-    ST(i,2) = 0.5*mean( (Y2_A - Y2_M(:,i)).^2 ) / VarY2;
-end
+%——— S1 / ST  ——%
+    d1 = 0.5*mean((Y1_B - Y1_M(:,i)).^2);  
+    d2 = 0.5*mean((Y2_B - Y2_M(:,i)).^2);
+    S1(i,1) = 1 - d1 / VarY1;
+    S1(i,2) = 1 - d2 / VarY2;
+
+    DT1 = 0.5*mean((Y1_A - Y1_M(:,i)).^2);
+    DT2 = 0.5*mean((Y2_A - Y2_M(:,i)).^2);
+    ST(i,1) = DT1 / VarY1;
+    ST(i,2) = DT2 / VarY2;
+    %  Var( (Y_B - Y_C)^2 ) / (2 VarY)^2 / N
+    se_S1_peak = sqrt(var((Y1_B - Y1_M(:,i)).^2,1) / (4*VarY1^2) / N);
+    se_S1_cum  = sqrt(var((Y2_B - Y2_M(:,i)).^2,1) / (4*VarY2^2) / N);
+    se_ST_peak = sqrt(var((Y1_A - Y1_M(:,i)).^2,1) / (4*VarY1^2) / N);
+    se_ST_cum  = sqrt(var((Y2_A - Y2_M(:,i)).^2,1) / (4*VarY2^2) / N);
+
+    z = 1.96;          % 95 %
+    S1_conf(i,1) = z * se_S1_peak;
+    S1_conf(i,2) = z * se_S1_cum;
+    ST_conf(i,1) = z * se_ST_peak;
+    ST_conf(i,2) = z * se_ST_cum;
+
+sum_check = S1(i,1) + ST(i,1);
+end  
 fprintf('Parameter   S1_peak  ST_peak   S1_cum  ST_cum\n');
 for i = 1:P
     fprintf('%-8s   %6.3f   %6.3f   %6.3f   %6.3f\n', ...
@@ -261,15 +297,23 @@ titles = {['S1 — ',sprintf('H Top-2 (first 5 d)')], ...
           ['S1 — ',sprintf('C (20 d)')], ...
           ['ST — ',sprintf('C (20 d)')]};
 datas = {S1(:,1), ST(:,1), S1(:,2), ST(:,2)};
+ci_arrays = {S1_conf(:,1), ST_conf(:,1), S1_conf(:,2), ST_conf(:,2)};
 
 for k = 1:4
     delete(findobj('Type','figure','Name',figs{k}));
     figure('Name',figs{k},'NumberTitle','off','Color','w',...
-           'NextPlot','replacechildren','Units','pixels');
+           'Units','pixels','Position',[100 100 560 420]);
+
     bar(datas{k},'FaceColor',clr,'EdgeColor','none');
-    grid on; yline(0,'k');
+    hold on                                    
+    grid on;  yline(0,'k');
     xticks(1:P); xticklabels(parNames);
     ylabel('Sobol index'); title(titles{k});
     set(gca,'Box','off');
-    saveas(gcf,[figs{k},'.pdf']);
+    errorbar(1:P, datas{k}, ci_arrays{k}, 'k',...
+             'linestyle','none', 'linewidth',1, 'CapSize',4);
+
+    fname = [figs{k},'.pdf'];
+    exportgraphics(gcf,fname,'ContentType','vector',...
+                   'BackgroundColor','none');
 end
