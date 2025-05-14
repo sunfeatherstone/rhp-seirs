@@ -47,7 +47,7 @@ sensitivity_analysis/
     ode_check_final_prcc.m
     ode_check_final_S1_ST.m
     ode_check_final_sobol_dynamic.m
-    sobol_Y_sample.mat
+    sample/                     # analysis sample 
 ```
 
 ---

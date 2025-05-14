@@ -225,7 +225,7 @@ calc_metric = @(lam) deal( ...
                         @(v)sum(maxk(v,min(2,numel(v)))), 0) ), ...
         sum(lam) );
 
-cacheFile = fullfile('sensitivity_analysis','sobol_Y_sample.mat');  
+cacheFile = fullfile('sensitivity_analysis','sample','sobol_sample.mat');  
 if ~isfolder(fileparts(cacheFile)), mkdir(fileparts(cacheFile)); end
 
 if isfile(cacheFile)

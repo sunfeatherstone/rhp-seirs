@@ -190,20 +190,47 @@ parNames = {'beta0','sigma0','theta','kappa','gamma','delta','omega','tau','A0'}
 idxTheta = [1 2 4 5 6 7 8 9];   idxA = 10:20;
 P        = numel(parNames);
 
-Nsim     = 5000;
-rangePct = 0.20;                rangLog = log(1+rangePct);
+% Nsim     = 5000;
+% rangePct = 0.20;                rangLog = log(1+rangePct);
 
-A = net(scramble(sobolset(P,'Skip',1000),'MatousekAffineOwen'),Nsim);
-B = net(scramble(sobolset(P,'Skip',2000),'MatousekAffineOwen'),Nsim);
+% A = net(scramble(sobolset(P,'Skip',1000),'MatousekAffineOwen'),Nsim);
+% B = net(scramble(sobolset(P,'Skip',2000),'MatousekAffineOwen'),Nsim);
 
-ThetaA = repmat(theta_refined,Nsim,1);
-ThetaB = repmat(theta_refined,Nsim,1);
-for j = 1:8
-    ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (2*A(:,j)-1).*rangLog;
-    ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (2*B(:,j)-1).*rangLog;
+% ThetaA = repmat(theta_refined,Nsim,1);
+% ThetaB = repmat(theta_refined,Nsim,1);
+% for j = 1:8
+%     ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (2*A(:,j)-1).*rangLog;
+%     ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (2*B(:,j)-1).*rangLog;
+% end
+% ThetaA(:,idxA) = ThetaA(:,idxA) + (2*A(:,9)-1).*rangLog;
+% ThetaB(:,idxA) = ThetaB(:,idxA) + (2*B(:,9)-1).*rangLog;
+
+
+
+sampleFile = 'sensitivity_analysis/sample/dynamic_sobol_sample.mat';
+
+if isfile(sampleFile)
+    load(sampleFile , 'A', 'B', 'ThetaA', 'ThetaB', 'Nsim', 'rangePct');
+else
+    Nsim     = 5000;
+    rangePct = 0.20;
+    P        = 9;
+    A = net(scramble(sobolset(P,'Skip',1000),'MatousekAffineOwen'),Nsim);
+    B = net(scramble(sobolset(P,'Skip',2000),'MatousekAffineOwen'),Nsim);
+    ThetaA = repmat(theta_refined,Nsim,1);
+    ThetaB = repmat(theta_refined,Nsim,1);
+    rangLog = log(1+rangePct);
+
+    for j = 1:8
+        ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (2*A(:,j)-1).*rangLog;
+        ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (2*B(:,j)-1).*rangLog;
+    end
+    ThetaA(:,idxA) = ThetaA(:,idxA) + (2*A(:,9)-1).*rangLog;
+    ThetaB(:,idxA) = ThetaB(:,idxA) + (2*B(:,9)-1).*rangLog;
+    save(sampleFile, 'A','B','ThetaA','ThetaB','Nsim','rangePct', '-v7.3');
 end
-ThetaA(:,idxA) = ThetaA(:,idxA) + (2*A(:,9)-1).*rangLog;
-ThetaB(:,idxA) = ThetaB(:,idxA) + (2*B(:,9)-1).*rangLog;
+
+
 YA = zeros(Nsim,T);  YB = YA;
 for n = 1:Nsim
     YA(n,:) = forward(ThetaA(n,:),F,T,dt_hr,false).';
@@ -230,6 +257,11 @@ for j = 1:P
     ST_inc(j,:) =     mean( (YA-YC).^2 ,1 ) ./ (2*Var_inc);
     S1_cum(j,:) = 1 - mean( (CB-CC).^2 ,1 ) ./ (2*Var_cum);
     ST_cum(j,:) =     mean( (CA-CC).^2 ,1 ) ./ (2*Var_cum);
+    thr = 1e-4;
+    S1_inc = min(max(S1_inc-thr,0),1);
+    ST_inc = min(max(ST_inc-thr,0),1);
+    S1_cum = min(max(S1_cum-thr,0),1);
+    ST_cum = min(max(ST_cum-thr,0),1);
 end
 thr = 1e-4;
 S1_inc = max(S1_inc-thr,0);  ST_inc = max(ST_inc-thr,0);
@@ -243,7 +275,7 @@ xt_tick_hr = 0:24*1:ceil(t_hours(end));
 
 for k = 1:4
     f = figure('Name',figs{k},'Color','w',...
-               'Units','pixels','Position',[80+320*k 120 3600 420]);
+               'Units','pixels','Position',[80+320*k 120 800 420]);
     imagesc(t_hours,1:P,datas{k});        axis xy
     set(gca,'YTick',1:P,'YTickLabel',parNames,...
             'XTick',xt_tick_hr,'XTickLabel',xt_tick_hr);

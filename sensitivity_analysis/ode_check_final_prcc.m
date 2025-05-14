@@ -201,18 +201,33 @@ Psel      = {'beta0','sigma0','theta','kappa', ...
              'gamma','delta','omega','tau','A0'};  
 idxTheta  = [1 2 4 5 6 7 8 9];
 idxA      = 10:20;
-Nsamp     = 2000;  epsRange = 0.20;  dayCut = 5;
-X_u  = lhsdesign(Nsamp,numel(Psel),'criterion','maximin');
-logL = log(1-epsRange);  logH = log(1+epsRange);
+prccSampleFile = 'sensitivity_analysis/sample/prcc_sample.mat'; 
+if isfile(prccSampleFile)
+    load(prccSampleFile,'ThetaS','X_u','Nsamp','epsRange');
+else
+    Nsamp    = 5000;   
+    epsRange = 0.20;   
+    Psel     = {'beta0','sigma0','theta','kappa', ...
+                'gamma','delta','omega','tau','A0'};
+    idxTheta = [1 2 4 5 6 7 8 9];
+    idxA     = 10:20;
 
-ThetaS = repmat(theta_refined,Nsamp,1);
-for j = 1:numel(idxTheta)
-    ThetaS(:, idxTheta(j)) = ThetaS(:, idxTheta(j)) + ...
-        (logL + (logH-logL).*X_u(:, j));
+    X_u  = lhsdesign(Nsamp, numel(Psel), 'criterion', 'maximin');
+    logL = log(1 - epsRange);
+    logH = log(1 + epsRange);
+
+    ThetaS = repmat(theta_refined, Nsamp, 1);
+    for j = 1:numel(idxTheta)
+        ThetaS(:, idxTheta(j)) = ThetaS(:, idxTheta(j)) + ...
+            (logL + (logH-logL).*X_u(:, j));
+    end
+    ThetaS(:, idxA) = ThetaS(:, idxA) + ...
+            (logL + (logH-logL).*X_u(:, end));
+
+    save(prccSampleFile, 'ThetaS','X_u','Nsamp','epsRange', '-v7.3');
 end
-ThetaS(:, idxA) = ThetaS(:, idxA) + ...
-        (logL + (logH-logL).*X_u(:, end));
-mask5      = day_idx <= dayCut;
+
+
 sumTop2_5  = zeros(Nsamp,1);
 cumTot     = zeros(Nsamp,1);
 
@@ -244,9 +259,10 @@ fprintf('\nPRCC (no lock) — Y = cumTotal, 20天\n');
 for k = 1:numel(Psel)
     fprintf('%-7s  ρ=%+6.3f  (p=%.2g)\n', Psel{k}, R9_tot(k),  p9_tot(k));
 end
+figs = {'PRCC-sumTop2Peak','PRCC-cumTotal'};
 figName = 'PRCC-sumTop2Peak';
 delete(findobj('Type','figure','Name',figName));
-figure('Name',figName,'NumberTitle','off','Color','w',...
+f1=figure('Name',figName,'NumberTitle','off','Color','w',...
        'NextPlot','replacechildren');
 
 bar(R9_peak,'FaceColor',[0.20 0.60 0.90],'EdgeColor','none'); hold on
@@ -255,11 +271,13 @@ errorbar(1:numel(R9_peak), R9_peak, CI9_peak,...
 yline(0,'k'); grid on
 xticks(1:numel(Psel));  xticklabels(Psel);
 ylabel('PRCC');  title({'PRCC';'(sumTop2Peak, first 5 days)'});
+exportgraphics(f1,[figs{1} '.pdf'], ...
+               'ContentType','vector','BackgroundColor','none')
 hold off
 figName = 'PRCC-cumTotal';
 delete(findobj('Type','figure','Name',figName));
 
-figure('Name',figName,'NumberTitle','off','Color','w', ...
+f2=figure('Name',figName,'NumberTitle','off','Color','w', ...
        'NextPlot','replacechildren');
 
 bar(R9_tot,'FaceColor',[0.20 0.60 0.90],'EdgeColor','none'); hold on
@@ -271,4 +289,6 @@ xticks(1:numel(Psel));  xticklabels(Psel);
 xlim([0.5 numel(Psel)+0.5])
 ylabel('PRCC');
 title({'PRCC'; '(cumTotal, 20 days)'});
+exportgraphics(f2,[figs{2} '.pdf'], ...
+               'ContentType','vector','BackgroundColor','none')
 hold off
