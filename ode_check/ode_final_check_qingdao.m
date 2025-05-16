@@ -149,7 +149,7 @@ theta_refined = data.theta_refined;
 theta_refined
 tbl  = readtable(weibo_file);
 bucketMin = 30;
-S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
+S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
 F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
 F_hour = @(t_hr) F_base(t_hr/2);

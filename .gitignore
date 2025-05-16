@@ -1,1 +1,5 @@
 *.parquet
+
+!rhythm/raw_posts_idp/posts_idp_part1.parquet
+!rhythm/raw_posts_idp/posts_idp_part2.parquet
+!rhythm/raw_posts_idp/posts_idp_part3.parquet

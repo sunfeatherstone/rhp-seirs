@@ -150,7 +150,7 @@ theta_refined = data.theta_refined;
 theta_refined
 tbl  = readtable(weibo_file);
 bucketMin = 30;
-S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
+S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
 F_base = @(tau) ppval(pp, mod(tau, 84));  
 F_hour = @(t_hr) F_base(t_hr/2);
@@ -201,58 +201,58 @@ A = net(sobA,N);           % N×P
 B = net(sobB,N);
 epsRange = 0.5;  logL = log(1-epsRange);  logH = log(1+epsRange);
 
-ThetaA = repmat(theta_refined,N,1);
-ThetaB = repmat(theta_refined,N,1);
+cacheFile = fullfile('sensitivity_analysis','sample','sobol_sample.mat');  
+if ~isfolder(fileparts(cacheFile)), mkdir(fileparts(cacheFile)); end
 
-for j = 1:numel(idxTheta)
-    ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (logL+(logH-logL).*A(:,j));
-    ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (logL+(logH-logL).*B(:,j));
-end
-ThetaA(:,idxA) = ThetaA(:,idxA) + (logL+(logH-logL).*A(:,end));
-ThetaB(:,idxA) = ThetaB(:,idxA) + (logL+(logH-logL).*B(:,end));
+if isfile(cacheFile)
+    load(cacheFile, ...
+        'ThetaA','ThetaB','ThetaMix');   
+else
+    ThetaA = repmat(theta_refined,N,1);
+    ThetaB = repmat(theta_refined,N,1);
 
-ThetaMix = cell(P,1);
-for i = 1:P
-    Tmix = ThetaA;
-    if i<=8, Tmix(:,idxTheta(i)) = ThetaB(:,idxTheta(i));
-    else,    Tmix(:,idxA)        = ThetaB(:,idxA);
+    for j = 1:numel(idxTheta)
+        ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (logL+(logH-logL).*A(:,j));
+        ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (logL+(logH-logL).*B(:,j));
     end
-    ThetaMix{i} = Tmix;
+    ThetaA(:,idxA) = ThetaA(:,idxA) + (logL+(logH-logL).*A(:,end));
+    ThetaB(:,idxA) = ThetaB(:,idxA) + (logL+(logH-logL).*B(:,end));
+
+    ThetaMix = cell(P,1);
+    for i = 1:P
+        Tmix = ThetaA;
+        if i<=8, Tmix(:,idxTheta(i)) = ThetaB(:,idxTheta(i));
+        else,    Tmix(:,idxA)        = ThetaB(:,idxA);
+        end
+        ThetaMix{i} = Tmix;
+    end
+    save(cacheFile, ...
+         'ThetaA','ThetaB','ThetaMix'); 
 end
+
 calc_metric = @(lam) deal( ...
         sum( accumarray(day_idx_const(day_idx_const<=5), ...
                         lam(day_idx_const<=5), [5,1], ...
                         @(v)sum(maxk(v,min(2,numel(v)))), 0) ), ...
         sum(lam) );
 
-cacheFile = fullfile('sensitivity_analysis','sample','sobol_sample.mat');  
-if ~isfolder(fileparts(cacheFile)), mkdir(fileparts(cacheFile)); end
+Y1_A = zeros(N,1);  Y2_A = zeros(N,1);
+Y1_B = zeros(N,1);  Y2_B = zeros(N,1);
+Y1_M = zeros(N,P);  Y2_M = zeros(N,P);
 
-if isfile(cacheFile)
-    load(cacheFile, ...
-        'Y1_A','Y2_A','Y1_B','Y2_B','Y1_M','Y2_M', ... 
-        'ThetaA','ThetaB','ThetaMix','meta');          
-else
-    Y1_A = zeros(N,1);  Y2_A = zeros(N,1);
-    Y1_B = zeros(N,1);  Y2_B = zeros(N,1);
-    Y1_M = zeros(N,P);  Y2_M = zeros(N,P);
-
-    for n = 1:N
-        [Y1_A(n),Y2_A(n)] = calc_metric( forward(ThetaA(n,:),F,T,dt_hr,false) );
-        [Y1_B(n),Y2_B(n)] = calc_metric( forward(ThetaB(n,:),F,T,dt_hr,false) );
-    end
-
-    for i = 1:P
-        for n = 1:N
-            [Y1_M(n,i),Y2_M(n,i)] = calc_metric( forward(ThetaMix{i}(n,:),F,T,dt_hr,false) );
-        end
-    end
-    meta = struct('N',N,'P',P,'timestamp',datetime); 
-    save(cacheFile, ...
-         'Y1_A','Y2_A','Y1_B','Y2_B','Y1_M','Y2_M', ...
-         'ThetaA','ThetaB','ThetaMix','meta', ...
-         '-v7.3'); 
+for n = 1:N
+    [Y1_A(n),Y2_A(n)] = calc_metric( forward(ThetaA(n,:),F,T,dt_hr,false) );
+    [Y1_B(n),Y2_B(n)] = calc_metric( forward(ThetaB(n,:),F,T,dt_hr,false) );
 end
+
+for i = 1:P
+    for n = 1:N
+        [Y1_M(n,i),Y2_M(n,i)] = calc_metric( forward(ThetaMix{i}(n,:),F,T,dt_hr,false) );
+    end
+end
+meta = struct('N',N,'P',P,'timestamp',datetime); 
+
+
 
 
 VarY1 = var([Y1_A;Y1_B],1);

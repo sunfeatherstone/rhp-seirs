@@ -171,7 +171,7 @@ end
 fprintf('============================\n\n');
 tbl  = readtable(weibo_file);
 bucketMin = 30;
-S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
+S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
 F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
 F_hour = @(t_hr) F_base(t_hr/2);
@@ -252,7 +252,7 @@ xlabel(ax1,'t (hour)');  ylabel(ax1,'increment');
 legend(ax1, {'observed','predicted'}, 'Location','best');
 
 drawnow;
-exportgraphics(fig1,'fig1_increment.pdf','ContentType','vector');
+exportgraphics(fig1,'chengdu_fig1_increment.pdf','ContentType','vector');
 fig2 = figure(2); clf(fig2,'reset');
 ax2  = axes(fig2);
 plot(ax2, t_hours, cum_obs, ...
@@ -267,13 +267,13 @@ ylabel(ax2,'cumulative');
 legend(ax2,'Location','best');
 
 drawnow;
-exportgraphics(fig2,'fig2_cumulative.pdf','ContentType','vector');
+exportgraphics(fig2,'chengdu_fig2_cumulative.pdf','ContentType','vector');
 fig3 = figure(3); clf(fig3,'reset');
 ax3  = axes(fig3);
 plot(ax3,t_hours,cum_obs-cum_pred,'b-');
 xlabel(ax3,'t (hour)'); ylabel(ax3,'cum\_obs - cum\_pred');
 drawnow;
-exportgraphics(fig3,'fig3_residuals.pdf','ContentType','vector');
+exportgraphics(fig3,'chengdu_fig3_residuals.pdf','ContentType','vector');
 b0    = exp(theta_refined(1));   % baseline β₀
 s0    = exp(theta_refined(2));   % baseline σ₀
 beta1 = exp(theta_refined(5));
@@ -299,7 +299,7 @@ legend(ax4,'Location','best');
 xlim(ax4,[0 168]);
 
 drawnow;
-exportgraphics(fig4,'fig4_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig4,'chengdu_fig4_beta_sigma_168h.pdf','ContentType','vector');
 inv_beta_sub  = 1 ./ beta_sub;     % 1/β(t)
 inv_sigma_sub = 1 ./ sigma_sub;    % 1/σ(t)
 fig5 = figure(5);  clf(fig5,'reset');
@@ -317,4 +317,4 @@ legend(ax5,'Location','best');
 xlim(ax5,[0 168]);
 
 drawnow;
-exportgraphics(fig5,'fig5_inv_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig5,'chengdu_fig5_inv_beta_sigma_168h.pdf','ContentType','vector');

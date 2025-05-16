@@ -150,7 +150,7 @@ theta_refined = data.theta_refined;
 theta_refined
 tbl  = readtable(weibo_file);
 bucketMin = 30;
-S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
+S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
 F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
 F_hour = @(t_hr) F_base(t_hr/2);
@@ -189,21 +189,6 @@ fprintf('\n=== 17) Dynamic Sobol  S₁(t) / S_T(t)  (λ & Cum) =============\n')
 parNames = {'beta0','sigma0','theta','kappa','gamma','delta','omega','tau','A0'};
 idxTheta = [1 2 4 5 6 7 8 9];   idxA = 10:20;
 P        = numel(parNames);
-
-% Nsim     = 5000;
-% rangePct = 0.20;                rangLog = log(1+rangePct);
-
-% A = net(scramble(sobolset(P,'Skip',1000),'MatousekAffineOwen'),Nsim);
-% B = net(scramble(sobolset(P,'Skip',2000),'MatousekAffineOwen'),Nsim);
-
-% ThetaA = repmat(theta_refined,Nsim,1);
-% ThetaB = repmat(theta_refined,Nsim,1);
-% for j = 1:8
-%     ThetaA(:,idxTheta(j)) = ThetaA(:,idxTheta(j)) + (2*A(:,j)-1).*rangLog;
-%     ThetaB(:,idxTheta(j)) = ThetaB(:,idxTheta(j)) + (2*B(:,j)-1).*rangLog;
-% end
-% ThetaA(:,idxA) = ThetaA(:,idxA) + (2*A(:,9)-1).*rangLog;
-% ThetaB(:,idxA) = ThetaB(:,idxA) + (2*B(:,9)-1).*rangLog;
 
 
 

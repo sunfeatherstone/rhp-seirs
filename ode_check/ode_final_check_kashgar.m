@@ -47,6 +47,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
     t_vec_hr = (0:T-1)' * dt_hr;
 
+
     tau = exp(theta(9));
     A1   = exp(theta(10)); 
     A2   = exp(theta(11)); 
@@ -54,38 +55,30 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A4   = exp(theta(13)); 
     A5   = exp(theta(14)); 
     A6   = exp(theta(15)); 
-    A7   = exp(theta(16)); 
-
-    tau1 = exp(theta(17));
-    time1 = (theta(18));
-    time2 = (theta(19));
+    tau1 = exp(theta(16));
+    time1 = (theta(17));
 
 
 
     phi = zeros(T,1);
-    dist1 = abs(mod(t_vec_hr-(12+time1-4)+12,24)-12);
-    dist2 = abs(mod(t_vec_hr-(11+time2-4)+12,24)-12);
-    dist3 = abs(mod(t_vec_hr-(10-4)+12,24)-12);
-    dist4 = abs(mod(t_vec_hr-(21.25-4)+12,24)-12);
-    dist5 = abs(mod(t_vec_hr-(10-4)+12,24)-12);
-    dist6 = abs(mod(t_vec_hr-(12-16)+12,24)-12);
-    dist7 = abs(mod(t_vec_hr-(10.5-16)+12,24)-12);
-
+    dist1 = abs(mod(t_vec_hr-(20.5+time1-18)+12,24)-12);
+    dist2 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
+    dist3 = abs(mod(t_vec_hr-(14-18)+12,24)-12);
+    dist4 = abs(mod(t_vec_hr-(20-18)+12,24)-12);
+    dist5 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
+    dist6 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
     idx1 = (day_idx_global == 1);
     idx2 = (day_idx_global == 2);
-    idx3 = (day_idx_global == 3);
-    idx4 = (day_idx_global == 3);
-    idx5 = (day_idx_global == 4);
-    idx6 = (day_idx_global == 8);
-    idx7 = (day_idx_global == 10);
-
+    idx3 = (day_idx_global == 2);
+    idx4 = (day_idx_global == 2);
+    idx5 = (day_idx_global == 3);
+    idx6 = (day_idx_global == 4);
     phi(idx1) = A1 * exp(-0.5*(dist1(idx1)./tau1).^2);
     phi(idx2) = A2 * exp(-0.5*(dist2(idx2)./tau).^2);
     phi(idx3) = A3*exp(-0.5*(dist3(idx3)./tau).^2);
     phi(idx4) = A4*exp(-0.5*(dist4(idx4)./tau).^2);
     phi(idx5) = A5*exp(-0.5*(dist5(idx5)./tau).^2);
     phi(idx6) = A6*exp(-0.5*(dist6(idx6)./tau).^2);
-    phi(idx7) = A7*exp(-0.5*(dist7(idx7)./tau).^2);
 
     Fp        = F .^ kappa;           
     normFac   = mean(Fp);             
@@ -106,7 +99,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
-    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I
+    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I 
     lam = lam_sigma + lam_phi;
 
     if cumFlag
@@ -167,7 +160,7 @@ end
 fprintf('============================\n\n');
 tbl  = readtable(weibo_file);
 bucketMin = 30;
-S = load("rhythm/posts_uidp_interpolation_alignment_spline_pp.mat");
+S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
 F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
 F_hour = @(t_hr) F_base(t_hr/2);
@@ -248,7 +241,7 @@ xlabel(ax1,'t (hour)');  ylabel(ax1,'increment');
 legend(ax1, {'observed','predicted'}, 'Location','best');
 
 drawnow;
-exportgraphics(fig1,'fig1_increment.pdf','ContentType','vector');
+exportgraphics(fig1,'kashi_fig1_increment.pdf','ContentType','vector');
 fig2 = figure(2); clf(fig2,'reset');
 ax2  = axes(fig2);
 plot(ax2, t_hours, cum_obs, ...
@@ -263,13 +256,13 @@ ylabel(ax2,'cumulative');
 legend(ax2,'Location','best');
 
 drawnow;
-exportgraphics(fig2,'fig2_cumulative.pdf','ContentType','vector');
+exportgraphics(fig2,'kashi_fig2_cumulative.pdf','ContentType','vector');
 fig3 = figure(3); clf(fig3,'reset');
 ax3  = axes(fig3);
 plot(ax3,t_hours,cum_obs-cum_pred,'b-');
 xlabel(ax3,'t (hour)'); ylabel(ax3,'cum\_obs - cum\_pred');
 drawnow;
-exportgraphics(fig3,'fig3_residuals.pdf','ContentType','vector');
+exportgraphics(fig3,'kashi_fig3_residuals.pdf','ContentType','vector');
 b0    = exp(theta_refined(1));   % baseline β₀
 s0    = exp(theta_refined(2));   % baseline σ₀
 beta1 = exp(theta_refined(5));
@@ -295,7 +288,7 @@ legend(ax4,'Location','best');
 xlim(ax4,[0 168]);
 
 drawnow;
-exportgraphics(fig4,'fig4_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig4,'kashi_fig4_beta_sigma_168h.pdf','ContentType','vector');
 inv_beta_sub  = 1 ./ beta_sub;     % 1/β(t)
 inv_sigma_sub = 1 ./ sigma_sub;    % 1/σ(t)
 fig5 = figure(5);  clf(fig5,'reset');
@@ -313,4 +306,4 @@ legend(ax5,'Location','best');
 xlim(ax5,[0 168]);
 
 drawnow;
-exportgraphics(fig5,'fig5_inv_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig5,'kashi_fig5_inv_beta_sigma_168h.pdf','ContentType','vector');
