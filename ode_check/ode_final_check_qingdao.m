@@ -25,6 +25,7 @@ function r = nb_dev_res(y, mu, k)
 end
 
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
+    % 解包基本参数
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -38,9 +39,11 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     gamma     = exp(theta(6)); delta=exp(theta(7));
     omega    = exp(theta(8));
 
-    T0 = datetime;  
+    % 计算脉冲 φ
+    T0 = datetime;  % 只是为了占位，t0 在外部脚本已定义为 workspace 变量
     persistent t_origin day_idx_global
     if isempty(t_origin)
+        % 首次调用，提取脚本里 t0 和 day_idx
         vars = evalin('base', 'whos');
         t_origin = evalin('base','t0');
         day_idx_global = evalin('base','day_idx');
@@ -60,46 +63,24 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A10   = exp(theta(19)); 
     A11   = exp(theta(20)); 
 
-
-
-    phi = zeros(T,1);
-    dist1 = abs(mod(t_vec_hr-(8.25-4)+12,24)-12);
-    dist2 = abs(mod(t_vec_hr-(13.25-4)+12,24)-12);
-    dist3 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    dist4 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    dist5 = abs(mod(t_vec_hr-(11.5-4)+12,24)-12);
-    dist6 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    dist7 = abs(mod(t_vec_hr-(8-4)+12,24)-12);
-    dist8 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    dist9 = abs(mod(t_vec_hr-(15.5-4)+12,24)-12);
-    dist10 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    dist11 = abs(mod(t_vec_hr-(9-4)+12,24)-12);
-    idx1 = (day_idx_global == 1);
-    idx2 = (day_idx_global == 2);
-    idx3 = (day_idx_global == 3);
-    idx4 = (day_idx_global == 4);
-    idx5 = (day_idx_global == 5);
-    idx6 = (day_idx_global == 6);
-    idx7 = (day_idx_global == 7);
-    idx8 = (day_idx_global == 8);
-    idx9 = (day_idx_global == 9);
-    idx10 = (day_idx_global == 10);
-    idx11 = (day_idx_global == 11);
-    phi(idx1) = A1 * exp(-0.5*(dist1(idx1)./tau).^2);
-    phi(idx2) = A2 * exp(-0.5*(dist2(idx2)./tau).^2);
-    phi(idx3) = A3*exp(-0.5*(dist3(idx3)./tau).^2);
-    phi(idx4) = A4*exp(-0.5*(dist4(idx4)./tau).^2);
-    phi(idx5) = A5*exp(-0.5*(dist5(idx5)./tau).^2);
-    phi(idx6) = A6*exp(-0.5*(dist6(idx6)./tau).^2);
-    phi(idx7) = A7*exp(-0.5*(dist7(idx7)./tau).^2);
-    phi(idx8) = A8*exp(-0.5*(dist8(idx8)./tau).^2);
-    phi(idx9) = A9*exp(-0.5*(dist9(idx9)./tau).^2);
-    phi(idx10) = A10*exp(-0.5*(dist10(idx10)./tau).^2);
-    phi(idx11) = A11*exp(-0.5*(dist11(idx11)./tau).^2);
-
-    Fp        = F .^ kappa;           
+    Fp        = F .^ kappa;          
     normFac   = mean(Fp);             
-    F_star    = Fp ./ normFac;       
+    F_star    = Fp ./ normFac;        
+
+
+
+    h_loc  = [ 8.25  13.25   9   9  11.5   9   8   9  15.5   9   9 ]; 
+    d_idx  = [1,2,3,4,5,6,7,8,9,10,11];
+    startHr= 4;
+    t_c = h_loc + (d_idx-1)*24 - startHr;        
+    A_vec = [A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11];
+    phi   = zeros(T,1);
+
+    for i = 1:11
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
+    end
+
+    % 积分
     y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
     for k=1:T-1
         b = b0*F_star(k);

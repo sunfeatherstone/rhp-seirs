@@ -58,31 +58,24 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     tau1 = exp(theta(16));
     time1 = (theta(17));
 
+    Fp        = F .^ kappa;          
+    normFac   = mean(Fp);            
+    F_star    = Fp ./ normFac;        
+    h_loc  = [ 20.5+time1  9   14   20  9  9]; 
+    d_idx  = [1 2 2 2 3 4];
+    startHr= 18;
+    t_c = h_loc + (d_idx-1)*24 - startHr;      
 
+    A_vec = [A1 A2 A3 A4 A5 A6];
+    phi   = zeros(T,1);
 
-    phi = zeros(T,1);
-    dist1 = abs(mod(t_vec_hr-(20.5+time1-18)+12,24)-12);
-    dist2 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    dist3 = abs(mod(t_vec_hr-(14-18)+12,24)-12);
-    dist4 = abs(mod(t_vec_hr-(20-18)+12,24)-12);
-    dist5 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    dist6 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    idx1 = (day_idx_global == 1);
-    idx2 = (day_idx_global == 2);
-    idx3 = (day_idx_global == 2);
-    idx4 = (day_idx_global == 2);
-    idx5 = (day_idx_global == 3);
-    idx6 = (day_idx_global == 4);
-    phi(idx1) = A1 * exp(-0.5*(dist1(idx1)./tau1).^2);
-    phi(idx2) = A2 * exp(-0.5*(dist2(idx2)./tau).^2);
-    phi(idx3) = A3*exp(-0.5*(dist3(idx3)./tau).^2);
-    phi(idx4) = A4*exp(-0.5*(dist4(idx4)./tau).^2);
-    phi(idx5) = A5*exp(-0.5*(dist5(idx5)./tau).^2);
-    phi(idx6) = A6*exp(-0.5*(dist6(idx6)./tau).^2);
-
-    Fp        = F .^ kappa;           
-    normFac   = mean(Fp);             
-    F_star    = Fp ./ normFac;       
+    for i = 1:6
+        if i==1
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
+        else
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
+        end
+    end     
     y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
     for k=1:T-1
         b = b0*F_star(k);

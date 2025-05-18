@@ -59,31 +59,24 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     tau1 = exp(theta(16));
     time1 = (theta(17));
 
+    Fp        = F .^ kappa;          
+    normFac   = mean(Fp);            
+    F_star    = Fp ./ normFac;        
+    h_loc  = [ 20.5+time1  9   14   20  9  9]; 
+    d_idx  = [1 2 2 2 3 4];
+    startHr= 18;
+    t_c = h_loc + (d_idx-1)*24 - startHr;      
 
+    A_vec = [A1 A2 A3 A4 A5 A6];
+    phi   = zeros(T,1);
 
-    phi = zeros(T,1);
-    dist1 = abs(mod(t_vec_hr-(20.5+time1-18)+12,24)-12);
-    dist2 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    dist3 = abs(mod(t_vec_hr-(14-18)+12,24)-12);
-    dist4 = abs(mod(t_vec_hr-(20-18)+12,24)-12);
-    dist5 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    dist6 = abs(mod(t_vec_hr-(9-18)+12,24)-12);
-    idx1 = (day_idx_global == 1);
-    idx2 = (day_idx_global == 2);
-    idx3 = (day_idx_global == 2);
-    idx4 = (day_idx_global == 2);
-    idx5 = (day_idx_global == 3);
-    idx6 = (day_idx_global == 4);
-    phi(idx1) = A1 * exp(-0.5*(dist1(idx1)./tau1).^2);
-    phi(idx2) = A2 * exp(-0.5*(dist2(idx2)./tau).^2);
-    phi(idx3) = A3*exp(-0.5*(dist3(idx3)./tau).^2);
-    phi(idx4) = A4*exp(-0.5*(dist4(idx4)./tau).^2);
-    phi(idx5) = A5*exp(-0.5*(dist5(idx5)./tau).^2);
-    phi(idx6) = A6*exp(-0.5*(dist6(idx6)./tau).^2);
-
-    Fp        = F .^ kappa;           
-    normFac   = mean(Fp);             
-    F_star    = Fp ./ normFac;       
+    for i = 1:6
+        if i==1
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
+        else
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
+        end
+    end     
     y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
     for k=1:T-1
         b = b0*F_star(k);
@@ -114,7 +107,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "/Users/sunyushi/life/cascades/Kashgar_out.csv";
+    weibo_file = "cascades/Kashgar_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -153,7 +146,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     resfun_full = @(th) sqrt(wt) .* nb_dev_res( inc , ...
         forward(th,F,T,dt_hr,false) , dispersion_k );
 
-    psoOpts = optimoptions('particleswarm', 'SwarmSize',60,'MaxIterations',100,'Display','iter');
+    psoOpts = optimoptions('particleswarm', 'SwarmSize',30,'MaxIterations',50,'Display','iter');
     obj_pso = @(th) sum(resfun_full(th).^2);
     theta0_all    = particleswarm(obj_pso, length(lb), lb, ub, psoOpts);
     lsqOpts = optimoptions('lsqnonlin', ...
@@ -162,7 +155,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     'OptimalityTolerance',1e-36, ...
     'FunctionTolerance',1e-36, ...
     'ScaleProblem','jacobian', ...
-    'MaxIterations',300, ...
+    'MaxIterations',100, ...
     'MaxFunctionEvaluations',1e9, ...
     'Display','iter');
     theta_refined = lsqnonlin(resfun_full, theta0_all, lb, ub, lsqOpts);
@@ -179,7 +172,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
     nll = nb_nll_cal(inc, lam_pred, dispersion_k);  
 
-    fn = sprintf('CMA-PSO-LSQ_pipiline/MAPE_%05.2f_NLL_%08.1f', mape, nll);
+    fn = sprintf('MAPE_%05.2f_NLL_%08.1f', mape, nll);
     save([fn '.mat'], 'theta_refined','mape');
 
 end
@@ -200,7 +193,7 @@ function nll = nb_nll_cal(y, mu, k, wt)
     end
 
 clear; clc; close all;
-lb_11  = [-7; -7; log(1e4); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
+lb_11  = [-7; -7; log(8e3); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
 ub_11  = [ 2;  2; log(1e5);  4; log(5);   log(1); log(1);        log(1/12);      log(12)];
 num_A = 8;
 lb_num=-7;

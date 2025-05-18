@@ -59,38 +59,25 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
 
     tau1 = exp(theta(17));
     time1 = (theta(18));
-    time2 = (theta(19));
+    Fp        = F .^ kappa;          
+    normFac   = mean(Fp);            
+    F_star    = Fp ./ normFac;        
+    h_loc  = [ 12+time1  11   10   21.25  10  12  10.5 ]; 
+    d_idx  = [1 2 3 3 4 8 10];
+    startHr= 4;
+    t_c = h_loc + (d_idx-1)*24 - startHr;      
 
+    A_vec = [A1 A2 A3 A4 A5 A6 A7];
+    phi   = zeros(T,1);
 
+    for i = 1:7
+        if i==1
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
+        else
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
+        end
+    end
 
-    phi = zeros(T,1);
-    dist1 = abs(mod(t_vec_hr-(12+time1-4)+12,24)-12);
-    dist2 = abs(mod(t_vec_hr-(11+time2-4)+12,24)-12);
-    dist3 = abs(mod(t_vec_hr-(10-4)+12,24)-12);
-    dist4 = abs(mod(t_vec_hr-(21.25-4)+12,24)-12);
-    dist5 = abs(mod(t_vec_hr-(10-4)+12,24)-12);
-    dist6 = abs(mod(t_vec_hr-(12-16)+12,24)-12);
-    dist7 = abs(mod(t_vec_hr-(10.5-16)+12,24)-12);
-
-    idx1 = (day_idx_global == 1);
-    idx2 = (day_idx_global == 2);
-    idx3 = (day_idx_global == 3);
-    idx4 = (day_idx_global == 3);
-    idx5 = (day_idx_global == 4);
-    idx6 = (day_idx_global == 8);
-    idx7 = (day_idx_global == 10);
-
-    phi(idx1) = A1 * exp(-0.5*(dist1(idx1)./tau1).^2);
-    phi(idx2) = A2 * exp(-0.5*(dist2(idx2)./tau).^2);
-    phi(idx3) = A3*exp(-0.5*(dist3(idx3)./tau).^2);
-    phi(idx4) = A4*exp(-0.5*(dist4(idx4)./tau).^2);
-    phi(idx5) = A5*exp(-0.5*(dist5(idx5)./tau).^2);
-    phi(idx6) = A6*exp(-0.5*(dist6(idx6)./tau).^2);
-    phi(idx7) = A7*exp(-0.5*(dist7(idx7)./tau).^2);
-
-    Fp        = F .^ kappa;           
-    normFac   = mean(Fp);             
-    F_star    = Fp ./ normFac;       
     y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
     for k=1:T-1
         b = b0*F_star(k);
@@ -158,12 +145,11 @@ A6     = exp(th(15));
 A7     = exp(th(16));
 tau1   = exp(th(17));
 time1  = th(18);          
-time2  = th(19);
 names = { 'beta0','sigma0','N','theta','kappa','gamma','delta','omega','tau', ...
-          'A1','A2','A3','A4','A5','A6','A7','tau1','t_shift1','t_shift2' };
+          'A1','A2','A3','A4','A5','A6','A7','tau1','t_shift1' };
 
 vals  = [ b0 s0 S0 p beta1 g0 d0 rho tau ...
-          A1 A2 A3 A4 A5 A6 A7 tau1 time1 time2];
+          A1 A2 A3 A4 A5 A6 A7 tau1 time1];
 fprintf('\n======= θ 参数解包值 =======\n');
 for k = 1:numel(names)
     fprintf('%-6s : %14.6g\n', names{k}, vals(k));
