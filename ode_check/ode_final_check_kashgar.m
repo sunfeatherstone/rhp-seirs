@@ -155,7 +155,7 @@ tbl  = readtable(weibo_file);
 bucketMin = 30;
 S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
-F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
+F_base = @(tau) ppval(pp, mod(tau, 84));   
 F_hour = @(t_hr) F_base(t_hr/2);
 t30 = (0:0.5:167.5)';          % 336 × 1
 ts = datetime(tbl.created_at,'InputFormat','yyyy-MM-dd HH:mm:ss');
@@ -187,7 +187,7 @@ eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 
 
-nll = nb_nll_cal(inc, lam_pred, dispersion_k)   % <-- 计算 NLL
+nll = nb_nll_cal(inc, lam_pred, dispersion_k)   
 eps0_inc = 1e-9;
 mask     = inc > eps0_inc;
 eps0_w   = 1e-9;
@@ -199,7 +199,7 @@ eps0_w  = 1e-9;
 
 fprintf('\n—— Rolling-Mean Increment WMAPE ——\n');
 for w = winList
-    filt     = ones(w,1) / w;          % w 桶均值卷积核
+    filt     = ones(w,1) / w;          
     inc_s    = filter(filt,1,inc);
     pred_s   = filter(filt,1,lam_pred);
     validIdx = (1:T)' >= w;
@@ -223,7 +223,7 @@ lam_pred = forward(theta_refined,F,T,dt_hr,false);
 cum_pred = forward(theta_refined,F,T,dt_hr,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
-nll  = nb_nll_cal(inc, lam_pred, dispersion_k);   % <-- 计算 NLL
+nll  = nb_nll_cal(inc, lam_pred, dispersion_k);   
 fig1 = figure(1); clf(fig1,'reset');
 ax1  = axes(fig1);
 cBar = ax1.ColorOrder(1,:);

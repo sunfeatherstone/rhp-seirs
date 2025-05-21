@@ -171,7 +171,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
 
     eps0 = 1e-9;
     mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
-    nll = nb_nll_cal(inc, lam_pred, dispersion_k);   % <-- 计算 NLL
+    nll = nb_nll_cal(inc, lam_pred, dispersion_k);  
 
     fn = sprintf('MAPE_%05.2f_NLL_%08.1f', mape, nll);
     save([fn '.mat'], 'theta_refined','mape');

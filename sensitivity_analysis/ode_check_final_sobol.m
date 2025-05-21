@@ -25,7 +25,7 @@ function r = nb_dev_res(y, mu, k)
 end
 
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
-    % 解包基本参数
+   
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -39,11 +39,11 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     gamma     = exp(theta(6)); delta=exp(theta(7));
     omega    = exp(theta(8));
 
-    % 计算脉冲 φ
-    T0 = datetime;  % 只是为了占位，t0 在外部脚本已定义为 workspace 变量
+    
+    T0 = datetime;  
     persistent t_origin day_idx_global
     if isempty(t_origin)
-        % 首次调用，提取脚本里 t0 和 day_idx
+       
         vars = evalin('base', 'whos');
         t_origin = evalin('base','t0');
         day_idx_global = evalin('base','day_idx');
@@ -63,18 +63,18 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A10   = exp(theta(19)); 
     A11   = exp(theta(20)); 
 
-    Fp        = F .^ kappa;           % 第一次指数放大
-    normFac   = mean(Fp);             % 周均值
-    F_star    = Fp ./ normFac;        % 二次归一化后的驱动项
+    Fp        = F .^ kappa;          
+    normFac   = mean(Fp);             
+    F_star    = Fp ./ normFac;        
 
 
 
     h_loc  = [ 8.25  13.25   9   9  11.5   9   8   9  15.5   9   9 ]; 
     d_idx  = [1,2,3,4,5,6,7,8,9,10,11];
     startHr= 4;
-    t_c = h_loc + (d_idx-1)*24 - startHr;        % 绝对中心时 (h) 距 t0
+    t_c = h_loc + (d_idx-1)*24 - startHr;        
 
-    % 11 个峰值向量
+    
     A_vec = [A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11];
     phi   = zeros(T,1);
 
@@ -99,7 +99,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
-    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I 流
+    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;       
     lam = lam_sigma + lam_phi;
 
     if cumFlag
@@ -182,7 +182,7 @@ sobB = scramble(sobolset(P,'Skip',2000,'Leap',200),'MatousekAffineOwen');
 
 A = net(sobA,N);           % N×P
 B = net(sobB,N);
-epsRange = 0.5;  logL = log(1-epsRange);  logH = log(1+epsRange);
+epsRange = 0.5;  logL = log(epsRange);  logH = log(1/epsRange);
 
 cacheFile = fullfile('sensitivity_analysis','sample','sobol_sample.mat');  
 if ~isfolder(fileparts(cacheFile)), mkdir(fileparts(cacheFile)); end

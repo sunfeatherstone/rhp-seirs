@@ -150,7 +150,7 @@ names = { 'beta0','sigma0','N','theta','kappa','gamma','delta','omega','tau', ..
 
 vals  = [ b0 s0 S0 p beta1 g0 d0 rho tau ...
           A1 A2 A3 A4 A5 A6 A7 tau1 time1];
-fprintf('\n======= θ 参数解包值 =======\n');
+
 for k = 1:numel(names)
     fprintf('%-6s : %14.6g\n', names{k}, vals(k));
 end
@@ -159,7 +159,7 @@ tbl  = readtable(weibo_file);
 bucketMin = 30;
 S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
 pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
-F_base = @(tau) ppval(pp, mod(tau, 84));   % tau 单位 = 2 h
+F_base = @(tau) ppval(pp, mod(tau, 84));   
 F_hour = @(t_hr) F_base(t_hr/2);
 t30 = (0:0.5:167.5)';          % 336 × 1
 ts = datetime(tbl.created_at,'InputFormat','yyyy-MM-dd HH:mm:ss');
