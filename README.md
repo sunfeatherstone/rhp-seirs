@@ -26,22 +26,28 @@ instructions are repeated below.
 ## 2 Directory layout
 
 ```text
+numerical_experiment/
+    simulate.m
+    sampling_for_final_RhPSEIRS.m
+    verify_chaos_or_periodic.m
 best_parameter/                     # best-fit parameters for each city (MAT)
-    Chengdu.mat
-    Kashgar.mat
-    Qingdao.mat
+    CascadeC.mat
+    CascadeB.mat
+    CascadeA.mat
 cascades/                           # benchmark cascades (timestamps only)
-    Chengdu_out.csv
-    Kashgar_out.csv
-    Qingdao_out.csv
+    CascadeC_out.csv
+    CascadeB_out.csv
+    CascadeA_out.csv
 CMA-PSO-LSQ_pipeline/               # end-to-end fitting pipeline
-    Chengdu_ode_pipeline_wtNLL.m
-    Kashgar_ode_pipeline_wtNLL.m
-    Qingdao_ode_pipeline_NLL.m
+    CascadeC_ode_pipeline_wtNLL.m
+    CascadeB_ode_pipeline_wtNLL.m
+    CascadeA_ode_pipeline_NLL.m
 ode_check/
-    ode_final_check_chengdu.m
-    ode_final_check_kashgar.m
-    ode_final_check_qingdao.m
+    ode_final_check_CascadeC.m
+    ode_final_check_CascadeB.m
+    ode_final_check_CascadeA.m
+    ode_check_final_R0eff.m
+    phase_diagram_3D.m
 rhythm/
     preprocess-1-merge.py
     preprocess-2-interpolation.py
@@ -49,6 +55,7 @@ rhythm/
     raw_posts_idp/                  # the original data after slicing
     preprocessed_data/              # preprocessed data and spline parameters 
 sensitivity_analysis/
+    ode_check_final_HSIC_contour.m
     ode_check_final_prcc.m
     ode_check_final_S1_ST.m
     ode_check_final_sobol_dynamic.m
@@ -57,21 +64,21 @@ sensitivity_analysis/
 
 ---
 
-## 3 Quick start — reproduce Qingdao in one line
+## 3 Quick start — reproduce CascadeA in one line
 
 ```bash
 # from the repository root
-matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/Qingdao_ode_pipeline_wtNLL"
+matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/CascadeA_ode_pipeline_wtNLL"
 ```
 
 This will:
-* load cascades/Qingdao_out.csv,
+* load cascades/CascadeA_out.csv,
 * read the rhythm baseline from rhythm/,
 * run CMA-ES → PSO → LSQ,
 * save the fitted θ to best_parameter/, and
 * plot the predicted vs. observed cumulative cascade.
 
-Run the analogous script for Kashgar or Chengdu to replicate all results in the
+Run the analogous script for CascadeB or CascadeC to replicate all results in the
 paper.
 
 

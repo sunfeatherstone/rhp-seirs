@@ -13,7 +13,7 @@ unique_dates_by_weekday = (
       .reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
 )
 print(unique_dates_by_weekday)
-for i in [90,95,98,99,100]:
+for i in [98]:
   df=df_in
   for day, group in df.groupby('weekday'):
       date_counts = group.groupby('date').size()

@@ -1,5 +1,5 @@
 clear functions
-
+rng(20250528); 
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -83,21 +83,53 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
     end
 
-    % 积分
-    y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
-    for k=1:T-1
-        b = b0*F_star(k);
-        g = gamma;
-        d = delta;
-        s = s0*F_star(k);
-        ph = phi(k)*F_star(k);
-        S=y(1,k); E=y(2,k); I=y(3,k); R=y(4,k);
-        dS= -b*S*I/N + omega*R - ph*S;
-        dE=  b*S*I/N  + (1-thetaV)*ph*S - s*E - d*E;
-        dI=  s*E + thetaV*ph*S - g*I ;
-        dR=  g*I + d*E - omega*R;
-        y(:,k+1) = y(:,k) + dt_hr*[dS;dE;dI;dR];
-    end
+    
+    % ---------- log-ode15s -----------------------------
+        epsEI  = 1e-15 * N;                 
+        U0     = log([E0; I0; R0] + epsEI); 
+        tspan  = (0:T-1) * dt_hr;           
+
+        if final_test
+            opts = odeset('RelTol',1e-6,'AbsTol',1e-6);
+        else
+            opts = odeset('RelTol',1e-3,'AbsTol',1e-3);
+        end
+
+
+        [~,U] = ode15s(@rhs_log, tspan, U0, opts);   % U : T × 3
+
+        E = exp(U(:,1)) - epsEI;
+        I = exp(U(:,2)) - epsEI;
+        R = exp(U(:,3)) - epsEI;
+        S = N - (E + I + R);
+
+        y = [S.'; E.'; I.'; R.'];           
+    % --------------------------------------------------------------
+
+        % ===== RHS：log SEIR =====
+        function dU = rhs_log(t,U)
+            E = max(exp(U(1)) - epsEI, 0);
+            I = max(exp(U(2)) - epsEI, 0);
+            R = max(exp(U(3)) - epsEI, 0);
+            S = max(N - (E + I + R),   0);
+
+            idx   = min(floor(t/dt_hr)+1, T); 
+            Ffac  = F_star(idx);
+            phi_t = phi(idx);
+
+            b = b0 * Ffac;
+            s = s0 * Ffac;
+            d = delta;
+            g = gamma;
+
+            dE =  b*S*I/N + (1-thetaV)*phi_t*S - s*E - d*E;
+            dI =  s*E     +   thetaV*phi_t*S   - g*I;
+            dR =  g*I + d*E - omega*R;
+
+            dU = [ dE/(E+epsEI);
+                dI/(I+epsEI);
+                dR/(R+epsEI) ];
+        end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
     lam_sigma = sigma_vec .* y(2,:)' * dt_hr;       
@@ -126,8 +158,8 @@ clc;  close all;
 clear all;
 format long g
 dispersion_k = 5;
-weibo_file = "cascades/Qingdao_out.csv";
-matFile = 'best_parameter/Qingdao.mat';
+weibo_file = "cascades/CascadeA_out.csv";
+matFile = 'best_parameter/CascadeA.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined
@@ -161,8 +193,8 @@ t_abs   = t0 + hours(t_hours);
 day_idx =  1 + floor(days(t_abs - dateshift(t0,'start','day')));
 assignin('base','t0',     t0);
 assignin('base','day_idx', day_idx);
-lam_pred = forward(theta_refined,F,T,dt_hr,false);
-cum_pred = forward(theta_refined,F,T,dt_hr,true);
+lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
+cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 
@@ -170,6 +202,8 @@ mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 nll = nb_nll_cal(inc, lam_pred, dispersion_k)   
 fprintf('\n=== 17) Dynamic Sobol  S₁(t) / S_T(t)  (λ & Cum) =============\n');
 parNames = {'beta0','sigma0','theta','kappa','gamma','delta','omega','tau','A0'};
+tickLbl = {'\beta_0','\sigma_0','\theta','\kappa', ...
+           '\gamma','\delta','\omega','\tau','A_0'};
 idxTheta = [1 2 4 5 6 7 8 9];   idxA = 10:20;
 P        = numel(parNames);
 
@@ -178,7 +212,7 @@ P        = numel(parNames);
 sampleFile = 'sensitivity_analysis/sample/dynamic_sobol_sample.mat';
 
 if isfile(sampleFile)
-    load(sampleFile , 'A', 'B', 'ThetaA', 'ThetaB', 'Nsim', 'rangePct');
+    load(sampleFile , 'A', 'B', 'ThetaA', 'ThetaB', 'Nsim', 'epsRange');
 else
     epsRange = 0.5;  logL = log(epsRange);  logH = log(1/epsRange);
     Nsim     = 10000;
@@ -207,8 +241,11 @@ end
 
 YA = zeros(Nsim,T);  YB = YA;
 for n = 1:Nsim
-    YA(n,:) = forward(ThetaA(n,:),F,T,dt_hr,false).';
-    YB(n,:) = forward(ThetaB(n,:),F,T,dt_hr,false).';
+    YA(n,:) = forward(ThetaA(n,:),F,T,dt_hr,false,true).';
+    YB(n,:) = forward(ThetaB(n,:),F,T,dt_hr,false,true).';
+    if mod(n,100)==0
+    n 
+    end
 end
 CA = cumsum(YA,2);    CB = cumsum(YB,2);
 S1_inc = zeros(P,T);     ST_inc = S1_inc;
@@ -223,7 +260,7 @@ for j = 1:P
     
     YC = zeros(Nsim,T);  CC = YC;
     for n = 1:Nsim
-        lam_n = forward(TC(n,:),F,T,dt_hr,false).';
+        lam_n = forward(TC(n,:),F,T,dt_hr,false,true).';
         YC(n,:) = lam_n;
         CC(n,:) = cumsum(lam_n);
     end
@@ -251,12 +288,13 @@ for k = 1:4
     f = figure('Name',figs{k},'Color','w',...
                'Units','pixels','Position',[80+320*k 120 800 420]);
     imagesc(t_hours,1:P,datas{k});        axis xy
-    set(gca,'YTick',1:P,'YTickLabel',parNames,...
-            'XTick',xt_tick_hr,'XTickLabel',xt_tick_hr);
+    set(gca,'YTick',1:P,'YTickLabel',tickLbl,...
+            'XTick',xt_tick_hr,'XTickLabel',xt_tick_hr,'TickLabelInterpreter','tex');
     xlabel('hours since start'); ylabel('parameter');
     title(titles{k});  colorbar
     exportgraphics(f,[figs{k} '.pdf'], ...
                'ContentType','vector','BackgroundColor','none')
-end
+    close all
+en
 
 

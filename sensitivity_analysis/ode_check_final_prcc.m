@@ -1,5 +1,5 @@
 clear functions
-
+rng(20250528); 
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -83,21 +83,53 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
     end
 
-    % 积分
-    y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
-    for k=1:T-1
-        b = b0*F_star(k);
-        g = gamma;
-        d = delta;
-        s = s0*F_star(k);
-        ph = phi(k)*F_star(k);
-        S=y(1,k); E=y(2,k); I=y(3,k); R=y(4,k);
-        dS= -b*S*I/N + omega*R - ph*S;
-        dE=  b*S*I/N  + (1-thetaV)*ph*S - s*E - d*E;
-        dI=  s*E + thetaV*ph*S - g*I ;
-        dR=  g*I + d*E - omega*R;
-        y(:,k+1) = y(:,k) + dt_hr*[dS;dE;dI;dR];
-    end
+    
+    % ---------- log-ode15s -----------------------------
+        epsEI  = 1e-15 * N;                 
+        U0     = log([E0; I0; R0] + epsEI); 
+        tspan  = (0:T-1) * dt_hr;           
+
+        if final_test
+            opts = odeset('RelTol',1e-6,'AbsTol',1e-6);
+        else
+            opts = odeset('RelTol',1e-3,'AbsTol',1e-3);
+        end
+
+
+        [~,U] = ode15s(@rhs_log, tspan, U0, opts);   % U : T × 3
+
+        E = exp(U(:,1)) - epsEI;
+        I = exp(U(:,2)) - epsEI;
+        R = exp(U(:,3)) - epsEI;
+        S = N - (E + I + R);
+
+        y = [S.'; E.'; I.'; R.'];           
+    % --------------------------------------------------------------
+
+        % ===== RHS：log SEIR =====
+        function dU = rhs_log(t,U)
+            E = max(exp(U(1)) - epsEI, 0);
+            I = max(exp(U(2)) - epsEI, 0);
+            R = max(exp(U(3)) - epsEI, 0);
+            S = max(N - (E + I + R),   0);
+
+            idx   = min(floor(t/dt_hr)+1, T); 
+            Ffac  = F_star(idx);
+            phi_t = phi(idx);
+
+            b = b0 * Ffac;
+            s = s0 * Ffac;
+            d = delta;
+            g = gamma;
+
+            dE =  b*S*I/N + (1-thetaV)*phi_t*S - s*E - d*E;
+            dI =  s*E     +   thetaV*phi_t*S   - g*I;
+            dR =  g*I + d*E - omega*R;
+
+            dU = [ dE/(E+epsEI);
+                dI/(I+epsEI);
+                dR/(R+epsEI) ];
+        end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
     lam_sigma = sigma_vec .* y(2,:)' * dt_hr;       
@@ -126,8 +158,8 @@ clc;  close all;
 clear all;
 format long g
 dispersion_k = 5;
-weibo_file = "cascades/Qingdao_out.csv";
-matFile = 'best_parameter/Qingdao.mat';
+weibo_file = "cascades/CascadeA_out.csv";
+matFile = 'best_parameter/CascadeA.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined
@@ -161,8 +193,8 @@ t_abs   = t0 + hours(t_hours);
 day_idx =  1 + floor(days(t_abs - dateshift(t0,'start','day')));
 assignin('base','t0',     t0);
 assignin('base','day_idx', day_idx);
-lam_pred = forward(theta_refined,F,T,dt_hr,false);
-cum_pred = forward(theta_refined,F,T,dt_hr,true);
+lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
+cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 
@@ -175,8 +207,6 @@ idxA     = 10:20;
 epsRange = 0.20;
 dayCut   = 5;
 mask5 = day_idx <= dayCut;
-sumTop2_5 = zeros(Nsamp,1);
-cumTot    = zeros(Nsamp,1);
 fprintf('\n=== PRCC (no lock) — sumTop2Peak & cumTotal ====================\n');
 
 Psel      = {'beta0','sigma0','theta','kappa', ...
@@ -214,7 +244,8 @@ sumTop2_5  = zeros(Nsamp,1);
 cumTot     = zeros(Nsamp,1);
 
 for n = 1:Nsamp
-    lam = forward(ThetaS(n,:), F, T, dt_hr, false);
+    n
+    lam = forward(ThetaS(n,:), F, T, dt_hr, false,true);
     dailyTop2 = accumarray(day_idx(mask5), lam(mask5), [dayCut,1], ...
                  @(v) sum(maxk(v,2)), 0);
     sumTop2_5(n) = sum(dailyTop2);
@@ -251,7 +282,15 @@ bar(R9_peak,'FaceColor',[0.20 0.60 0.90],'EdgeColor','none'); hold on
 errorbar(1:numel(R9_peak), R9_peak, CI9_peak,...
          'k.','CapSize',6,'LineWidth',1);
 yline(0,'k'); grid on
-xticks(1:numel(Psel));  xticklabels(Psel);
+
+
+tickLbl = {'\beta_0','\sigma_0','\theta','\kappa', ...
+           '\gamma','\delta','\omega','\tau','A_0'};
+           
+set(gca,'XTick',1:numel(tickLbl), ...
+        'XTickLabel',tickLbl,      ...
+        'TickLabelInterpreter','tex'); 
+xlim([0.5 numel(tickLbl)+0.5])
 ylabel('PRCC');  title({'PRCC';'(sumTop2Peak, first 5 days)'});
 exportgraphics(f1,[figs{1} '.pdf'], ...
                'ContentType','vector','BackgroundColor','none')
@@ -267,8 +306,10 @@ errorbar(1:numel(R9_tot), R9_tot, CI9_tot, ...
          'k.','CapSize',6,'LineWidth',1);              % 95 % CI
 
 yline(0,'k'); grid on
-xticks(1:numel(Psel));  xticklabels(Psel);
-xlim([0.5 numel(Psel)+0.5])
+set(gca,'XTick',1:numel(tickLbl), ...
+        'XTickLabel',tickLbl,      ...
+        'TickLabelInterpreter','tex'); 
+xlim([0.5 numel(tickLbl)+0.5])
 ylabel('PRCC');
 title({'PRCC'; '(cumTotal, 20 days)'});
 exportgraphics(f2,[figs{2} '.pdf'], ...

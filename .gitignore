@@ -3,3 +3,10 @@
 !rhythm/raw_posts_idp/posts_idp_part1.parquet
 !rhythm/raw_posts_idp/posts_idp_part2.parquet
 !rhythm/raw_posts_idp/posts_idp_part3.parquet
+
+*sampling_full_log.csv
+*sampling_full_log_1.csv
+*sampling_full_log_2.csv
+
+*convert.m
+*CMA-PSO-LSQ_pipiline_new/

@@ -82,21 +82,53 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
     end
 
-    % 积分
-    y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
-    for k=1:T-1
-        b = b0*F_star(k);
-        g = gamma;
-        d = delta;
-        s = s0*F_star(k);
-        ph = phi(k)*F_star(k);
-        S=y(1,k); E=y(2,k); I=y(3,k); R=y(4,k);
-        dS= -b*S*I/N + omega*R - ph*S;
-        dE=  b*S*I/N  + (1-thetaV)*ph*S - s*E - d*E;
-        dI=  s*E + thetaV*ph*S - g*I ;
-        dR=  g*I + d*E - omega*R;
-        y(:,k+1) = y(:,k) + dt_hr*[dS;dE;dI;dR];
-    end
+    
+    % ---------- log-ode15s -----------------------------
+        epsEI  = 1e-15 * N;                 
+        U0     = log([E0; I0; R0] + epsEI); 
+        tspan  = (0:T-1) * dt_hr;           
+
+        if final_test
+            opts = odeset('RelTol',1e-6,'AbsTol',1e-6);
+        else
+            opts = odeset('RelTol',1e-3,'AbsTol',1e-3);
+        end
+
+
+        [~,U] = ode15s(@rhs_log, tspan, U0, opts);   % U : T × 3
+
+        E = exp(U(:,1)) - epsEI;
+        I = exp(U(:,2)) - epsEI;
+        R = exp(U(:,3)) - epsEI;
+        S = N - (E + I + R);
+
+        y = [S.'; E.'; I.'; R.'];           
+    % --------------------------------------------------------------
+
+        % ===== RHS：log SEIR =====
+        function dU = rhs_log(t,U)
+            E = max(exp(U(1)) - epsEI, 0);
+            I = max(exp(U(2)) - epsEI, 0);
+            R = max(exp(U(3)) - epsEI, 0);
+            S = max(N - (E + I + R),   0);
+
+            idx   = min(floor(t/dt_hr)+1, T); 
+            Ffac  = F_star(idx);
+            phi_t = phi(idx);
+
+            b = b0 * Ffac;
+            s = s0 * Ffac;
+            d = delta;
+            g = gamma;
+
+            dE =  b*S*I/N + (1-thetaV)*phi_t*S - s*E - d*E;
+            dI =  s*E     +   thetaV*phi_t*S   - g*I;
+            dR =  g*I + d*E - omega*R;
+
+            dU = [ dE/(E+epsEI);
+                dI/(I+epsEI);
+                dR/(R+epsEI) ];
+        end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
     lam_sigma = sigma_vec .* y(2,:)' * dt_hr;       
@@ -112,7 +144,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "cascades/Qingdao_out.csv";
+    weibo_file = "cascades/CascadeA_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -144,23 +176,23 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     assignin('base','t0',     t0);
     assignin('base','day_idx', day_idx);
     resfun_full = @(th) ...
-        nb_dev_res( inc , forward(th,F,T,dt_hr,false) , dispersion_k );
+        nb_dev_res( inc , forward(th,F,T,dt_hr,false,false) , dispersion_k );
 
     psoOpts = optimoptions('particleswarm', 'SwarmSize',30,'MaxIterations',50,'Display','iter');
     obj_pso = @(th) sum(resfun_full(th).^2);
     theta0_all    = particleswarm(obj_pso, length(lb), lb, ub, psoOpts);
     lsqOpts = optimoptions('lsqnonlin', ...
-    'Algorithm','trust-region-reflective', ...  % TRR 是默认，显式写出来方便改
+    'Algorithm','trust-region-reflective', ... 
     'StepTolerance',1e-36, ...
     'OptimalityTolerance',1e-36, ...
-    'FunctionTolerance',1e-36, ...
+    'FunctionTolerance',1, ...
     'ScaleProblem','jacobian', ...
     'MaxIterations',100, ...
     'MaxFunctionEvaluations',1e9, ...
     'Display','iter');
     theta_refined = lsqnonlin(resfun_full, theta0_all, lb, ub, lsqOpts);
-    lam_pred = forward(theta_refined,F,T,dt_hr,false);
-    cum_pred = forward(theta_refined,F,T,dt_hr,true);
+    lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
+    cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
     if any(lam_pred < -1e-2)
         idx = find(lam_pred < 0, 1);
         error("lamPred:Negative", ...

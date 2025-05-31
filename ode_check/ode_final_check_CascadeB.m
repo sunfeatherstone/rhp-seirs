@@ -9,6 +9,7 @@ function full = expand_theta(theta_red,theta_base,stage)
     idx = (stage-1)*3 + (12:14);
     full(idx) = theta_red;
 end
+
 function r = resid_stage(th_red, stage, theta_base, ...
     F, T, dt_hr, inc, idx, dispersion_k)
     th_full = expand_theta(th_red, theta_base, stage);
@@ -23,6 +24,9 @@ function r = nb_dev_res(y, mu, k)
     d2 = 2*( y.*log(max(y,eps)./mu) - (y+k).*log((y+k)./(mu+k)) );
     r  = sign(y-mu) .* sqrt(max(d2,0));
 end
+
+
+
 
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     b0     = exp(theta(1)); 
@@ -76,20 +80,54 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
         end
     end     
-    y = nan(4,T); y(:,1) = [S0;E0;I0;R0];
-    for k=1:T-1
-        b = b0*F_star(k);
-        g = gamma;
-        d = delta;
-        s = s0*F_star(k);
-        ph = phi(k)*F_star(k);
-        S=y(1,k); E=y(2,k); I=y(3,k); R=y(4,k);
-        dS= -b*S*I/N + omega*R - ph*S;
-        dE=  b*S*I/N  + (1-thetaV)*ph*S - s*E - d*E;
-        dI=  s*E + thetaV*ph*S - g*I ;
-        dR=  g*I + d*E - omega*R;
-        y(:,k+1) = y(:,k) + dt_hr*[dS;dE;dI;dR];
-    end
+
+
+    % ---------- log-ode15s -----------------------------
+        epsEI  = 1e-15 * N;                 
+        U0     = log([E0; I0; R0] + epsEI); 
+        tspan  = (0:T-1) * dt_hr;           
+
+        if final_test
+            opts = odeset('RelTol',1e-6,'AbsTol',1e-6);
+        else
+            opts = odeset('RelTol',1e-3,'AbsTol',1e-3);
+        end
+
+
+        [~,U] = ode15s(@rhs_log, tspan, U0, opts);   % U : T × 3
+
+        E = exp(U(:,1)) - epsEI;
+        I = exp(U(:,2)) - epsEI;
+        R = exp(U(:,3)) - epsEI;
+        S = N - (E + I + R);
+
+        y = [S.'; E.'; I.'; R.'];           
+    % --------------------------------------------------------------
+
+        % ===== RHS：log SEIR =====
+        function dU = rhs_log(t,U)
+            E = max(exp(U(1)) - epsEI, 0);
+            I = max(exp(U(2)) - epsEI, 0);
+            R = max(exp(U(3)) - epsEI, 0);
+            S = max(N - (E + I + R),   0);
+
+            idx   = min(floor(t/dt_hr)+1, T); 
+            Ffac  = F_star(idx);
+            phi_t = phi(idx);
+
+            b = b0 * Ffac;
+            s = s0 * Ffac;
+            d = delta;
+            g = gamma;
+
+            dE =  b*S*I/N + (1-thetaV)*phi_t*S - s*E - d*E;
+            dI =  s*E     +   thetaV*phi_t*S   - g*I;
+            dR =  g*I + d*E - omega*R;
+
+            dU = [ dE/(E+epsEI);
+                dI/(I+epsEI);
+                dR/(R+epsEI) ];
+        end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
     lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I 
@@ -101,6 +139,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         out = lam;
     end
 end
+
 
 
 
@@ -119,8 +158,8 @@ clc;  close all;
 clear all
 format long g
 dispersion_k = 5;
-weibo_file = "cascades/Kashgar_out.csv";
-matFile = 'best_parameter/Kashgar.mat';
+weibo_file = "cascades/CascadeB_out.csv";
+matFile = '/Users/sunyushi/Downloads/CascadeB/MAPE_02.10_NLL_001385.1.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined
@@ -181,8 +220,8 @@ t_abs   = t0 + hours(t_hours);
 day_idx =  1 + floor(days(t_abs - dateshift(t0,'start','day')));
 assignin('base','t0',     t0);
 assignin('base','day_idx', day_idx);
-lam_pred = forward(theta_refined,F,T,dt_hr,false);
-cum_pred = forward(theta_refined,F,T,dt_hr,true);
+lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
+cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 
@@ -219,8 +258,8 @@ plot(t_hours,cum_pred,'r--');
 
 figure(3); clf;
 plot(t_hours,cum_obs-cum_pred,'b-');
-lam_pred = forward(theta_refined,F,T,dt_hr,false);
-cum_pred = forward(theta_refined,F,T,dt_hr,true);
+lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
+cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
 nll  = nb_nll_cal(inc, lam_pred, dispersion_k);   
