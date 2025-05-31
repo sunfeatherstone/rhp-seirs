@@ -27,27 +27,26 @@ instructions are repeated below.
 
 ```text
 numerical_experiment/
-    simulate.m
-    sampling_for_final_RhPSEIRS.m
-    verify_chaos_or_periodic.m
-best_parameter/                     # best-fit parameters for each city (MAT)
+    generate_param_pool.m           # generate parameter combinations at one time
+    run_for_sampling.m              # load the generated parameter combination and conduct experiments
+    param_pool.csv                              
+    sampling_results.csv
+best_parameter/                     # best-fit parameters for each cascade
     CascadeC.mat
     CascadeB.mat
     CascadeA.mat
 cascades/                           # benchmark cascades (timestamps only)
-    CascadeC_out.csv
-    CascadeB_out.csv
     CascadeA_out.csv
+    CascadeB_out.csv
+    CascadeC_out.csv
 CMA-PSO-LSQ_pipeline/               # end-to-end fitting pipeline
-    CascadeC_ode_pipeline_wtNLL.m
-    CascadeB_ode_pipeline_wtNLL.m
     CascadeA_ode_pipeline_NLL.m
+    CascadeB_ode_pipeline_wtNLL.m
+    CascadeC_ode_pipeline_wtNLL.m
 ode_check/
-    ode_final_check_CascadeC.m
-    ode_final_check_CascadeB.m
     ode_final_check_CascadeA.m
-    ode_check_final_R0eff.m
-    phase_diagram_3D.m
+    ode_final_check_CascadeB.m
+    ode_final_check_CascadeC.m
 rhythm/
     preprocess-1-merge.py
     preprocess-2-interpolation.py
@@ -57,7 +56,6 @@ rhythm/
 sensitivity_analysis/
     ode_check_final_HSIC_contour.m
     ode_check_final_prcc.m
-    ode_check_final_S1_ST.m
     ode_check_final_sobol_dynamic.m
     sample/                         # analysis sample 
 ```
