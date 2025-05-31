@@ -1,4 +1,5 @@
 clear functions
+clear all
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -25,7 +26,6 @@ function r = nb_dev_res(y, mu, k)
 end
 
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
-
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -33,20 +33,12 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     N     = exp(theta(3)); E0     = 0;
     I0     = 0; R0     = 0;
     S0      = N;
-    thetaV       = 1/(1+exp(-theta(4)));;
+    thetaV       = 1/(1+exp(-theta(4)));
 
     kappa  = exp(theta(5));
     gamma     = exp(theta(6)); delta=exp(theta(7));
     omega    = exp(theta(8));
 
-
-    T0 = datetime; 
-    persistent t_origin day_idx_global
-    if isempty(t_origin)
-        vars = evalin('base', 'whos');
-        t_origin = evalin('base','t0');
-        day_idx_global = evalin('base','day_idx');
-    end
     t_vec_hr = (0:T-1)' * dt_hr;
 
     tau = exp(theta(9));
@@ -57,26 +49,26 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A5   = exp(theta(14)); 
     A6   = exp(theta(15)); 
     A7   = exp(theta(16)); 
-    A8   = exp(theta(17)); 
-    A9   = exp(theta(18)); 
-    A10   = exp(theta(19))
-    A11   = exp(theta(20)); 
 
+    tau1 = exp(theta(17));
+    time1 = (theta(18));
     Fp        = F .^ kappa;          
-    normFac   = mean(Fp);             
+    normFac   = mean(Fp);            
     F_star    = Fp ./ normFac;        
-
-
-
-    h_loc  = [ 8.25  13.25   9   9  11.5   9   8   9  15.5   9   9 ]; 
-    d_idx  = [1,2,3,4,5,6,7,8,9,10,11];
+    h_loc  = [ 12+time1  11   10   21.25  10  12  10.5 ]; 
+    d_idx  = [1 2 3 3 4 8 10];
     startHr= 4;
-    t_c = h_loc + (d_idx-1)*24 - startHr;        
-    A_vec = [A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11];
+    t_c = h_loc + (d_idx-1)*24 - startHr;      
+
+    A_vec = [A1 A2 A3 A4 A5 A6 A7];
     phi   = zeros(T,1);
 
-    for i = 1:11
+    for i = 1:7
+        if i==1
+        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
+        else
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
+        end
     end
 
     
@@ -84,7 +76,6 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         epsEI  = 1e-15 * N;                 
         U0     = log([E0; I0; R0] + epsEI); 
         tspan  = (0:T-1) * dt_hr;           
-
         if final_test
             opts = odeset('RelTol',1e-6,'AbsTol',1e-6);
         else
@@ -126,9 +117,11 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
                 dI/(I+epsEI);
                 dR/(R+epsEI) ];
         end
+
+
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
-    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I 
+    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I
     lam = lam_sigma + lam_phi;
 
     if cumFlag
@@ -137,6 +130,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         out = lam;
     end
 end
+
 
 
 function nll = nb_nll_cal(y, mu, k)
@@ -154,11 +148,40 @@ clc;  close all;
 clear all
 format long g
 dispersion_k = 5;
-weibo_file = "cascades/CascadeA_out.csv";
-matFile = 'best_parameter/CascadeA.mat';
+weibo_file = "Events/EventC_out.csv";
+matFile = 'best_parameter/EventC.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined
+th = theta_refined(:);
+b0     = exp(th(1));
+s0     = exp(th(2));
+S0     = exp(th(3));
+p      = 1/(1+exp(-th(4)));
+beta1  = exp(th(5));
+g0     = exp(th(6));
+d0     = exp(th(7));
+rho    = exp(th(8));
+tau    = exp(th(9));
+A1     = exp(th(10));
+A2     = exp(th(11));
+A3     = exp(th(12));
+A4     = exp(th(13));
+A5     = exp(th(14));
+A6     = exp(th(15));
+A7     = exp(th(16));
+tau1   = exp(th(17));
+time1  = th(18);          
+names = { 'beta0','sigma0','N','theta','kappa','gamma','delta','omega','tau', ...
+          'A1','A2','A3','A4','A5','A6','A7','tau1','t_shift1' };
+
+vals  = [ b0 s0 S0 p beta1 g0 d0 rho tau ...
+          A1 A2 A3 A4 A5 A6 A7 tau1 time1];
+
+for k = 1:numel(names)
+    fprintf('%-6s : %14.6g\n', names{k}, vals(k));
+end
+fprintf('============================\n\n');
 tbl  = readtable(weibo_file);
 bucketMin = 30;
 S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -207,7 +230,7 @@ eps0_w  = 1e-9;
 
 fprintf('\n—— Rolling-Mean Increment WMAPE ——\n');
 for w = winList
-    filt     = ones(w,1) / w;          
+    filt     = ones(w,1) / w;        
     inc_s    = filter(filt,1,inc);
     pred_s   = filter(filt,1,lam_pred);
     validIdx = (1:T)' >= w;
@@ -231,7 +254,7 @@ lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
 cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
-nll  = nb_nll_cal(inc, lam_pred, dispersion_k);  
+nll  = nb_nll_cal(inc, lam_pred, dispersion_k);   
 fig1 = figure(1); clf(fig1,'reset');
 ax1  = axes(fig1);
 cBar = ax1.ColorOrder(1,:);
@@ -242,7 +265,7 @@ xlabel(ax1,'t (hour)');  ylabel(ax1,'increment');
 legend(ax1, {'observed','predicted'}, 'Location','best');
 
 drawnow;
-exportgraphics(fig1,'fig1_increment.pdf','ContentType','vector');
+exportgraphics(fig1,'EventC_fig1_increment.pdf','ContentType','vector');
 fig2 = figure(2); clf(fig2,'reset');
 ax2  = axes(fig2);
 plot(ax2, t_hours, cum_obs, ...
@@ -257,13 +280,13 @@ ylabel(ax2,'cumulative');
 legend(ax2,'Location','best');
 
 drawnow;
-exportgraphics(fig2,'fig2_cumulative.pdf','ContentType','vector');
+exportgraphics(fig2,'EventC_fig2_cumulative.pdf','ContentType','vector');
 fig3 = figure(3); clf(fig3,'reset');
 ax3  = axes(fig3);
 plot(ax3,t_hours,cum_obs-cum_pred,'b-');
 xlabel(ax3,'t (hour)'); ylabel(ax3,'cum\_obs - cum\_pred');
 drawnow;
-exportgraphics(fig3,'fig3_residuals.pdf','ContentType','vector');
+exportgraphics(fig3,'EventC_fig3_residuals.pdf','ContentType','vector');
 b0    = exp(theta_refined(1));   % baseline β₀
 s0    = exp(theta_refined(2));   % baseline σ₀
 beta1 = exp(theta_refined(5));
@@ -289,7 +312,7 @@ legend(ax4,'Location','best');
 xlim(ax4,[0 168]);
 
 drawnow;
-exportgraphics(fig4,'fig4_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig4,'EventC_fig4_beta_sigma_168h.pdf','ContentType','vector');
 inv_beta_sub  = 1 ./ beta_sub;     % 1/β(t)
 inv_sigma_sub = 1 ./ sigma_sub;    % 1/σ(t)
 fig5 = figure(5);  clf(fig5,'reset');
@@ -307,4 +330,4 @@ legend(ax5,'Location','best');
 xlim(ax5,[0 168]);
 
 drawnow;
-exportgraphics(fig5,'fig5_inv_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig5,'EventC_fig5_inv_beta_sigma_168h.pdf','ContentType','vector');

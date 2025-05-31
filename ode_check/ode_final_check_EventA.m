@@ -9,7 +9,6 @@ function full = expand_theta(theta_red,theta_base,stage)
     idx = (stage-1)*3 + (12:14);
     full(idx) = theta_red;
 end
-
 function r = resid_stage(th_red, stage, theta_base, ...
     F, T, dt_hr, inc, idx, dispersion_k)
     th_full = expand_theta(th_red, theta_base, stage);
@@ -25,10 +24,8 @@ function r = nb_dev_res(y, mu, k)
     r  = sign(y-mu) .* sqrt(max(d2,0));
 end
 
-
-
-
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
+
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -42,7 +39,8 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     gamma     = exp(theta(6)); delta=exp(theta(7));
     omega    = exp(theta(8));
 
-    T0 = datetime;  
+
+    T0 = datetime; 
     persistent t_origin day_idx_global
     if isempty(t_origin)
         vars = evalin('base', 'whos');
@@ -51,7 +49,6 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
     t_vec_hr = (0:T-1)' * dt_hr;
 
-
     tau = exp(theta(9));
     A1   = exp(theta(10)); 
     A2   = exp(theta(11)); 
@@ -59,29 +56,30 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A4   = exp(theta(13)); 
     A5   = exp(theta(14)); 
     A6   = exp(theta(15)); 
-    tau1 = exp(theta(16));
-    time1 = (theta(17));
+    A7   = exp(theta(16)); 
+    A8   = exp(theta(17)); 
+    A9   = exp(theta(18)); 
+    A10   = exp(theta(19))
+    A11   = exp(theta(20)); 
 
     Fp        = F .^ kappa;          
-    normFac   = mean(Fp);            
+    normFac   = mean(Fp);             
     F_star    = Fp ./ normFac;        
-    h_loc  = [ 20.5+time1  9   14   20  9  9]; 
-    d_idx  = [1 2 2 2 3 4];
-    startHr= 18;
-    t_c = h_loc + (d_idx-1)*24 - startHr;      
 
-    A_vec = [A1 A2 A3 A4 A5 A6];
+
+
+    h_loc  = [ 8.25  13.25   9   9  11.5   9   8   9  15.5   9   9 ]; 
+    d_idx  = [1,2,3,4,5,6,7,8,9,10,11];
+    startHr= 4;
+    t_c = h_loc + (d_idx-1)*24 - startHr;        
+    A_vec = [A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11];
     phi   = zeros(T,1);
 
-    for i = 1:6
-        if i==1
-        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
-        else
+    for i = 1:11
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
-        end
-    end     
+    end
 
-
+    
     % ---------- log-ode15s -----------------------------
         epsEI  = 1e-15 * N;                 
         U0     = log([E0; I0; R0] + epsEI); 
@@ -141,8 +139,6 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
 end
 
 
-
-
 function nll = nb_nll_cal(y, mu, k)
     
         eps = 1e-9;
@@ -158,38 +154,11 @@ clc;  close all;
 clear all
 format long g
 dispersion_k = 5;
-weibo_file = "cascades/CascadeB_out.csv";
-matFile = '/Users/sunyushi/Downloads/CascadeB/MAPE_02.10_NLL_001385.1.mat';
+weibo_file = "Events/EventA_out.csv";
+matFile = 'best_parameter/EventA.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined
-th = theta_refined(:);
-b0     = exp(th(1));
-s0     = exp(th(2));
-S0     = exp(th(3));
-p      = 1/(1+exp(-th(4)));
-beta1  = exp(th(5));
-g0     = exp(th(6));
-d0     = exp(th(7));
-rho    = exp(th(8));
-tau    = exp(th(9));
-A1     = exp(th(10));
-A2     = exp(th(11));
-A3     = exp(th(12));
-A4     = exp(th(13));
-A5     = exp(th(14));
-A6     = exp(th(15));
-tau1   = exp(th(16));
-time1  = th(17);
-names = { 'beta0','sigma0','N','theta','kappa','gamma','delta','omega','tau', ...
-          'A1','A2','A3','A4','A5','A6','tau1','t_shift' };
-
-vals  = [ b0 s0 S0 p beta1 g0 d0 rho tau ...
-          A1 A2 A3 A4 A5 A6 tau1 time1 ];
-for k = 1:numel(names)
-    fprintf('%-6s : %14.6g\n', names{k}, vals(k));
-end
-fprintf('============================\n\n');
 tbl  = readtable(weibo_file);
 bucketMin = 30;
 S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -226,7 +195,7 @@ eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100
 
 
-nll = nb_nll_cal(inc, lam_pred, dispersion_k)   
+nll = nb_nll_cal(inc, lam_pred, dispersion_k)  
 eps0_inc = 1e-9;
 mask     = inc > eps0_inc;
 eps0_w   = 1e-9;
@@ -262,7 +231,7 @@ lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
 cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
 eps0 = 1e-9;
 mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
-nll  = nb_nll_cal(inc, lam_pred, dispersion_k);   
+nll  = nb_nll_cal(inc, lam_pred, dispersion_k);  
 fig1 = figure(1); clf(fig1,'reset');
 ax1  = axes(fig1);
 cBar = ax1.ColorOrder(1,:);
@@ -273,7 +242,7 @@ xlabel(ax1,'t (hour)');  ylabel(ax1,'increment');
 legend(ax1, {'observed','predicted'}, 'Location','best');
 
 drawnow;
-exportgraphics(fig1,'kashi_fig1_increment.pdf','ContentType','vector');
+exportgraphics(fig1,'fig1_increment.pdf','ContentType','vector');
 fig2 = figure(2); clf(fig2,'reset');
 ax2  = axes(fig2);
 plot(ax2, t_hours, cum_obs, ...
@@ -288,13 +257,13 @@ ylabel(ax2,'cumulative');
 legend(ax2,'Location','best');
 
 drawnow;
-exportgraphics(fig2,'kashi_fig2_cumulative.pdf','ContentType','vector');
+exportgraphics(fig2,'fig2_cumulative.pdf','ContentType','vector');
 fig3 = figure(3); clf(fig3,'reset');
 ax3  = axes(fig3);
 plot(ax3,t_hours,cum_obs-cum_pred,'b-');
 xlabel(ax3,'t (hour)'); ylabel(ax3,'cum\_obs - cum\_pred');
 drawnow;
-exportgraphics(fig3,'kashi_fig3_residuals.pdf','ContentType','vector');
+exportgraphics(fig3,'fig3_residuals.pdf','ContentType','vector');
 b0    = exp(theta_refined(1));   % baseline β₀
 s0    = exp(theta_refined(2));   % baseline σ₀
 beta1 = exp(theta_refined(5));
@@ -320,7 +289,7 @@ legend(ax4,'Location','best');
 xlim(ax4,[0 168]);
 
 drawnow;
-exportgraphics(fig4,'kashi_fig4_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig4,'fig4_beta_sigma_168h.pdf','ContentType','vector');
 inv_beta_sub  = 1 ./ beta_sub;     % 1/β(t)
 inv_sigma_sub = 1 ./ sigma_sub;    % 1/σ(t)
 fig5 = figure(5);  clf(fig5,'reset');
@@ -338,4 +307,4 @@ legend(ax5,'Location','best');
 xlim(ax5,[0 168]);
 
 drawnow;
-exportgraphics(fig5,'kashi_fig5_inv_beta_sigma_168h.pdf','ContentType','vector');
+exportgraphics(fig5,'fig5_inv_beta_sigma_168h.pdf','ContentType','vector');

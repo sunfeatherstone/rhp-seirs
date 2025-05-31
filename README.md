@@ -15,7 +15,7 @@ The core resources are
 IDs, max error ≤ 1 s*  
 * **A fitted weekly rhythm–modulation function** derived from that corpus  
 * **A CMA-ES → PSO → LSQ pipeline written in MATLAB R2024b** that calibrates a four-compartment
-RhP–SEIRS model to real cascades  
+RhP–SEIRS model to real Events  
 * **Best-fit parameters, diagnostic plots and global-sensitivity analyses**
 
 The complete data–processing chain is documented in the paper; only essential usage
@@ -31,22 +31,22 @@ numerical_experiment/
     run_for_sampling.m              # load the generated parameter combination and conduct experiments
     param_pool.csv                              
     sampling_results.csv
-best_parameter/                     # best-fit parameters for each cascade
-    CascadeC.mat
-    CascadeB.mat
-    CascadeA.mat
-cascades/                           # benchmark cascades (timestamps only)
-    CascadeA_out.csv
-    CascadeB_out.csv
-    CascadeC_out.csv
+best_parameter/                     # best-fit parameters for each Event
+    EventC.mat
+    EventB.mat
+    EventA.mat
+Events/                           # benchmark Events (timestamps only)
+    EventA_out.csv
+    EventB_out.csv
+    EventC_out.csv
 CMA-PSO-LSQ_pipeline/               # end-to-end fitting pipeline
-    CascadeA_ode_pipeline_NLL.m
-    CascadeB_ode_pipeline_wtNLL.m
-    CascadeC_ode_pipeline_wtNLL.m
+    EventA_ode_pipeline_NLL.m
+    EventB_ode_pipeline_wtNLL.m
+    EventC_ode_pipeline_wtNLL.m
 ode_check/
-    ode_final_check_CascadeA.m
-    ode_final_check_CascadeB.m
-    ode_final_check_CascadeC.m
+    ode_final_check_EventA.m
+    ode_final_check_EventB.m
+    ode_final_check_EventC.m
 rhythm/
     preprocess-1-merge.py
     preprocess-2-interpolation.py
@@ -62,21 +62,21 @@ sensitivity_analysis/
 
 ---
 
-## 3 Quick start — reproduce CascadeA in one line
+## 3 Quick start — reproduce EventA in one line
 
 ```bash
 # from the repository root
-matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/CascadeA_ode_pipeline_wtNLL"
+matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/EventA_ode_pipeline_wtNLL"
 ```
 
 This will:
-* load cascades/CascadeA_out.csv,
+* load Events/EventA_out.csv,
 * read the rhythm baseline from rhythm/,
 * run CMA-ES → PSO → LSQ,
 * save the fitted θ to best_parameter/, and
-* plot the predicted vs. observed cumulative cascade.
+* plot the predicted vs. observed cumulative Event.
 
-Run the analogous script for CascadeB or CascadeC to replicate all results in the
+Run the analogous script for EventB or EventC to replicate all results in the
 paper.
 
 
@@ -97,7 +97,7 @@ All MATLAB scripts are self-contained (no toolboxes beyond Statistics and Optimi
 Original text, screen names, profile URLs etc. have been permanently removed.
 * The column "weibo_id_rand" is a cryptographically random, one-way mapping of the original Weibo IDs.
 The secret key will never be disclosed; re-identification is infeasible.
-* The three cascade files originate from the MIT-licensed Weibo-COV corpus but retain
+* The three Event files originate from the MIT-licensed Weibo-COV corpus but retain
 timestamps only.
 Obtain the full corpus from the original authors if you need text or user fields.
 

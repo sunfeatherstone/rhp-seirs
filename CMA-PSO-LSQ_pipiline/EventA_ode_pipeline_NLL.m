@@ -1,23 +1,4 @@
-clear functions
-
-function rho = rho_euler(theta, F_star, dt_hr, delta, gamma)
-    beta0  = exp(theta(1));      % baseline β₀
-    sigma0 = exp(theta(2));      % baseline σ₀
-
-    beta_t  = beta0  .* F_star;
-    sigma_t = sigma0 .* F_star;
-
-    M = eye(2);                 
-    for k = 1:numel(beta_t)
-        b = beta_t(k);
-        s = sigma_t(k);
-        A = [   - (s + delta) ,  b      ;
-                   s           , -gamma ];
-        M = (eye(2) + dt_hr * A) * M; 
-    end
-    rho = max(abs(eig(M)));   
-end
-
+clear functions      
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -28,13 +9,13 @@ function full = expand_theta(theta_red,theta_base,stage)
     idx = (stage-1)*3 + (12:14);
     full(idx) = theta_red;
 end
-% function r = resid_stage(th_red, stage, theta_base, ...
-%     F, T, dt_hr, inc, idx, dispersion_k)
-%     th_full = expand_theta(th_red, theta_base, stage);
-%     C_full  = forward(th_full, F, T, dt_hr, true);
-%     lam_full = forward(th_full, F, T, dt_hr, false);
-%     r = nb_dev_res( inc(idx) , lam_full(idx) , dispersion_k );
-% end
+function r = resid_stage(th_red, stage, theta_base, ...
+    F, T, dt_hr, inc, idx, dispersion_k)
+    th_full = expand_theta(th_red, theta_base, stage);
+    C_full  = forward(th_full, F, T, dt_hr, true);
+    lam_full = forward(th_full, F, T, dt_hr, false);   
+    r = nb_dev_res( inc(idx) , lam_full(idx) , dispersion_k );
+end
 
 function r = nb_dev_res(y, mu, k)
     eps = 1e-9;
@@ -44,6 +25,7 @@ function r = nb_dev_res(y, mu, k)
 end
 
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
+   
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -57,9 +39,11 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     gamma     = exp(theta(6)); delta=exp(theta(7));
     omega    = exp(theta(8));
 
+    
     T0 = datetime;  
     persistent t_origin day_idx_global
     if isempty(t_origin)
+       
         vars = evalin('base', 'whos');
         t_origin = evalin('base','t0');
         day_idx_global = evalin('base','day_idx');
@@ -74,26 +58,28 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A5   = exp(theta(14)); 
     A6   = exp(theta(15)); 
     A7   = exp(theta(16)); 
+    A8   = exp(theta(17)); 
+    A9   = exp(theta(18)); 
+    A10   = exp(theta(19)); 
+    A11   = exp(theta(20)); 
 
-    tau1 = exp(theta(17));
-    time1 = (theta(18));
     Fp        = F .^ kappa;          
-    normFac   = mean(Fp);            
+    normFac   = mean(Fp);             
     F_star    = Fp ./ normFac;        
-    h_loc  = [ 12+time1  11   10   21.25  10  12  10.5 ]; 
-    d_idx  = [1 2 3 3 4 8 10];
-    startHr= 4;
-    t_c = h_loc + (d_idx-1)*24 - startHr;      
 
-    A_vec = [A1 A2 A3 A4 A5 A6 A7];
+
+
+    h_loc  = [ 8.25  13.25   9   9  11.5   9   8   9  15.5   9   9 ]; 
+    d_idx  = [1,2,3,4,5,6,7,8,9,10,11];
+    startHr= 4;
+    t_c = h_loc + (d_idx-1)*24 - startHr;        
+
+    
+    A_vec = [A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11];
     phi   = zeros(T,1);
 
-    for i = 1:7
-        if i==1
-        phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
-        else
+    for i = 1:11
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
-        end
     end
 
     
@@ -107,6 +93,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         else
             opts = odeset('RelTol',1e-3,'AbsTol',1e-3);
         end
+
 
         [~,U] = ode15s(@rhs_log, tspan, U0, opts);   % U : T × 3
 
@@ -144,7 +131,7 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         end
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
-    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I
+    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;       
     lam = lam_sigma + lam_phi;
 
     if cumFlag
@@ -153,12 +140,11 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
         out = lam;
     end
 end
-
 function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_fit(lb,ub)
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "cascades/CascadeC_out.csv";
+    weibo_file = "Events/EventA_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -189,33 +175,25 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     day_idx =  1 + floor(days(t_abs - dateshift(t0,'start','day')));
     assignin('base','t0',     t0);
     assignin('base','day_idx', day_idx);
-    w0  = 10;     
-    tau = 12;
-    wt  = 1 + (w0-1) * exp(-t_hours / tau);
-    assignin('base','wt', wt);
+    resfun_full = @(th) ...
+        nb_dev_res( inc , forward(th,F,T,dt_hr,false,false) , dispersion_k );
 
-    resfun_full = @(th) sqrt(wt) .* nb_dev_res( inc , ...
-        forward(th,F,T,dt_hr,false,true) , dispersion_k );
-    resfun_pso = @(th) sqrt(wt) .* nb_dev_res( inc , ...
-        forward(th,F,T,dt_hr,false,false) , dispersion_k );
-    obj_pso = @(th) sum(resfun_pso(th).^2);
-
-    psoOpts = optimoptions('particleswarm', 'SwarmSize',30,'MaxIterations',30,'Display','iter');
-    
+    psoOpts = optimoptions('particleswarm', 'SwarmSize',30,'MaxIterations',50,'Display','iter');
+    obj_pso = @(th) sum(resfun_full(th).^2);
     theta0_all    = particleswarm(obj_pso, length(lb), lb, ub, psoOpts);
     lsqOpts = optimoptions('lsqnonlin', ...
-    'Algorithm','trust-region-reflective', ...  
+    'Algorithm','trust-region-reflective', ... 
     'StepTolerance',1e-36, ...
     'OptimalityTolerance',1e-36, ...
     'FunctionTolerance',1, ...
     'ScaleProblem','jacobian', ...
-    'MaxIterations',15, ...
+    'MaxIterations',100, ...
     'MaxFunctionEvaluations',1e9, ...
     'Display','iter');
     theta_refined = lsqnonlin(resfun_full, theta0_all, lb, ub, lsqOpts);
     lam_pred = forward(theta_refined,F,T,dt_hr,false,true);
     cum_pred = forward(theta_refined,F,T,dt_hr,true,true);
-    if any(lam_pred < -1)
+    if any(lam_pred < -1e-2)
         idx = find(lam_pred < 0, 1);
         error("lamPred:Negative", ...
             "lam\\_pred contains negative value at index %d (%.3g)", ...
@@ -226,40 +204,36 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
     nll = nb_nll_cal(inc, lam_pred, dispersion_k);  
 
-    fn = sprintf('/Users/sunyushi/Downloads/CascadeC/MAPE_%05.2f_NLL_%08.1f', mape, nll);
+    fn = sprintf('MAPE_%05.2f_NLL_%08.1f', mape, nll);
     save([fn '.mat'], 'theta_refined','mape');
 
 end
 
 
 
-function nll = nb_nll_cal(y, mu, k, wt)
+function nll = nb_nll_cal(y, mu, k)
     
         eps = 1e-9;
         mu = max(mu, eps);
         k  = max(k,  eps);
-        if nargin<4, wt = 1; end
-        ll  = gammaln(y + k) - gammaln(k) - gammaln(y + 1) ...
-            + k .* log(k ./ (k + mu)) ...
-            + y .* log(mu ./ (k + mu));
-
-        nll = -sum(wt .* ll);
+        ll = gammaln(y + k) - gammaln(k) - gammaln(y + 1) ...
+           + k .* log(k ./ (k + mu)) ...
+           + y .* log(mu ./ (k + mu));
+    
+        nll = -sum(ll);
     end
-
 clear; clc; close all;
-lb_11  = [-7; -7; log(5e4); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
-ub_11  = [ 2;  2; log(1.6e5);  4; log(5);   log(1); log(1);        log(1/12);      log(12)];
-lb_num=-7;
-un_num=+3;
-lb_p   = [lb_num;lb_num;lb_num;lb_num;lb_num;lb_num;lb_num;log(0.1);-3];     
-ub_p   = [un_num;un_num;un_num;un_num;un_num;un_num;un_num;log(12);+3];
+lb_11  = [-7; -7; log(1e4); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
+ub_11  = [ 2;  2; log(1e6);  4; log(5);   log(1); log(1);        log(1/12);      log(12)];
+lb_p   = -7*ones(11,1);     % A1…A11
+ub_p   =  3*ones(11,1);
 D      = numel(lb_p);
 
 dispersion_k = 5;
 maxRestart        = 10000;
 budgetPerRestart  = 40*D*2;
 lambda            = 4 + floor(3*log(D));
-stateF            = 'cma_state_local_new_CascadeC.mat';
+stateF            = 'cma_state_local_new.mat';
 if isfile(stateF)
     load(stateF,"bestx","bestFit","restartID");
 else
@@ -292,12 +266,12 @@ while restartID<=maxRestart
     restartID = restartID+1;
 end
 
+fprintf('\n========= DONE =========\n');
 function nll=evaluate_stage(A_log,lb11,ub11,disp_k)
     row=A_log(:); lb=[lb11;row]; ub=[ub11;row];
     try
         [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_fit(lb,ub);
-        wt = evalin('base','wt');
-        nll = nb_nll_cal(inc, lam_pred, disp_k, wt);;
+        nll=nb_nll_cal(inc,lam_pred,disp_k);
         if ~isfinite(nll), nll=inf; 
         
         end

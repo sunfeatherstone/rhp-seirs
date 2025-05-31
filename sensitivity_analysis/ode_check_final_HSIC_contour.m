@@ -10,9 +10,9 @@ F_base = @(tau) ppval(pp, mod(tau, 84));
 F_hour = @(t_hr) F_base(t_hr/2);
 
 paramFiles = { ...
-    'best_parameter/CascadeA.mat', ...
-    'best_parameter/CascadeB.mat', ...
-    'best_parameter/CascadeC.mat' };
+    'best_parameter/EventA.mat', ...
+    'best_parameter/EventB.mat', ...
+    'best_parameter/EventC.mat' };
 
 nSample = 10000;     
 D_feat  = 200;       
@@ -99,7 +99,7 @@ end
 
 
 paramNames = {'\beta_0','\sigma_0','\kappa','\gamma','\delta'};
-cityNames  = {'CascadeA','CascadeB','CascadeC'};
+cityNames  = {'EventA','EventB','EventC'};
 
 fig = figure('Units','centimeters','Position',[2 2 24 10]);
 

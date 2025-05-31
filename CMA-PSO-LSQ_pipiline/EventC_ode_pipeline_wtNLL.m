@@ -1,5 +1,23 @@
 clear functions
 
+function rho = rho_euler(theta, F_star, dt_hr, delta, gamma)
+    beta0  = exp(theta(1));      % baseline β₀
+    sigma0 = exp(theta(2));      % baseline σ₀
+
+    beta_t  = beta0  .* F_star;
+    sigma_t = sigma0 .* F_star;
+
+    M = eye(2);                 
+    for k = 1:numel(beta_t)
+        b = beta_t(k);
+        s = sigma_t(k);
+        A = [   - (s + delta) ,  b      ;
+                   s           , -gamma ];
+        M = (eye(2) + dt_hr * A) * M; 
+    end
+    rho = max(abs(eig(M)));   
+end
+
 function red = shrink_theta(theta_full,stage)
     idx = (stage-1)*3 + (12:14);
     red = theta_full(idx);
@@ -10,13 +28,13 @@ function full = expand_theta(theta_red,theta_base,stage)
     idx = (stage-1)*3 + (12:14);
     full(idx) = theta_red;
 end
-function r = resid_stage(th_red, stage, theta_base, ...
-    F, T, dt_hr, inc, idx, dispersion_k)
-    th_full = expand_theta(th_red, theta_base, stage);
-    C_full  = forward(th_full, F, T, dt_hr, true);
-    lam_full = forward(th_full, F, T, dt_hr, false);
-    r = nb_dev_res( inc(idx) , lam_full(idx) , dispersion_k );
-end
+% function r = resid_stage(th_red, stage, theta_base, ...
+%     F, T, dt_hr, inc, idx, dispersion_k)
+%     th_full = expand_theta(th_red, theta_base, stage);
+%     C_full  = forward(th_full, F, T, dt_hr, true);
+%     lam_full = forward(th_full, F, T, dt_hr, false);
+%     r = nb_dev_res( inc(idx) , lam_full(idx) , dispersion_k );
+% end
 
 function r = nb_dev_res(y, mu, k)
     eps = 1e-9;
@@ -25,12 +43,7 @@ function r = nb_dev_res(y, mu, k)
     r  = sign(y-mu) .* sqrt(max(d2,0));
 end
 
-
-
-
-
 function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
-    clear rhs_log                 
     b0     = exp(theta(1)); 
 
     s0     = exp(theta(2)); 
@@ -53,7 +66,6 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
     t_vec_hr = (0:T-1)' * dt_hr;
 
-
     tau = exp(theta(9));
     A1   = exp(theta(10)); 
     A2   = exp(theta(11)); 
@@ -61,27 +73,28 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     A4   = exp(theta(13)); 
     A5   = exp(theta(14)); 
     A6   = exp(theta(15)); 
-    tau1 = exp(theta(16));
-    time1 = (theta(17));
+    A7   = exp(theta(16)); 
 
+    tau1 = exp(theta(17));
+    time1 = (theta(18));
     Fp        = F .^ kappa;          
     normFac   = mean(Fp);            
     F_star    = Fp ./ normFac;        
-    h_loc  = [ 20.5+time1  9   14   20  9  9]; 
-    d_idx  = [1 2 2 2 3 4];
-    startHr= 18;
+    h_loc  = [ 12+time1  11   10   21.25  10  12  10.5 ]; 
+    d_idx  = [1 2 3 3 4 8 10];
+    startHr= 4;
     t_c = h_loc + (d_idx-1)*24 - startHr;      
 
-    A_vec = [A1 A2 A3 A4 A5 A6];
+    A_vec = [A1 A2 A3 A4 A5 A6 A7];
     phi   = zeros(T,1);
 
-    for i = 1:6
+    for i = 1:7
         if i==1
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau1).^2 );
         else
         phi = phi + A_vec(i) * exp( -0.5 * ((t_vec_hr - t_c(i))./tau).^2 );
         end
-    end     
+    end
 
     
     % ---------- log-ode15s -----------------------------
@@ -129,13 +142,10 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
                 dI/(I+epsEI);
                 dR/(R+epsEI) ];
         end
-
-
     sigma_vec = s0 * F_star;
     lam_phi = thetaV * (phi .* F_star) .* y(1,:)' * dt_hr;
-    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I 
+    lam_sigma = sigma_vec .* y(2,:)' * dt_hr;        % E→I
     lam = lam_sigma + lam_phi;
-    
 
     if cumFlag
         out = cumsum(lam);
@@ -144,19 +154,16 @@ function out = forward(theta,F,T,dt_hr,cumFlag,final_test)
     end
 end
 
-
-
-
 function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_fit(lb,ub)
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "cascades/CascadeB_out.csv";
+    weibo_file = "Events/EventC_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
     pp = mkpp(S.breaks, S.coefs);     % true cubic spline on [0,84]
-    F_base = @(tau) ppval(pp, mod(tau, 84));  
+    F_base = @(tau) ppval(pp, mod(tau, 84));   
     F_hour = @(t_hr) F_base(t_hr/2);
     t30 = (0:0.5:167.5)';          % 336 × 1
     ts = datetime(tbl.created_at,'InputFormat','yyyy-MM-dd HH:mm:ss');
@@ -182,28 +189,10 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     day_idx =  1 + floor(days(t_abs - dateshift(t0,'start','day')));
     assignin('base','t0',     t0);
     assignin('base','day_idx', day_idx);
-    w0  = 10;      
+    w0  = 10;     
     tau = 12;
     wt  = 1 + (w0-1) * exp(-t_hours / tau);
     assignin('base','wt', wt);
-
-
-
-% function sanity_check(F,T,dt_hr,lb,ub)
-%     thetaA = lb + rand(size(lb)).*(ub-lb);
-%     thetaB = lb + rand(size(lb)).*(ub-lb);
-
-%     lamA_rk = forward(thetaA,F,T,dt_hr,false,false)
-%     lamB_rk = forward(thetaB,F,T,dt_hr,false,false);
-%     fprintf('rk4 diff ratio  = %.3g\n', norm(lamA_rk-lamB_rk)/norm(lamA_rk) );
-
-%     lamA_15 = forward(thetaA,F,T,dt_hr,false,true)
-%     fprintf('rk4 vs ode15s (same θ) = %.3g\n', norm(lamA_rk-lamA_15)/norm(lamA_15) );
-% end
-
-% sanity_check(F,T,dt_hr,lb,ub)
-
-
 
     resfun_full = @(th) sqrt(wt) .* nb_dev_res( inc , ...
         forward(th,F,T,dt_hr,false,true) , dispersion_k );
@@ -237,7 +226,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
     nll = nb_nll_cal(inc, lam_pred, dispersion_k);  
 
-    fn = sprintf('/Users/sunyushi/Downloads/CascadeB/MAPE_%05.2f_NLL_%08.1f', mape, nll);
+    fn = sprintf('/Users/sunyushi/Downloads/EventC/MAPE_%05.2f_NLL_%08.1f', mape, nll);
     save([fn '.mat'], 'theta_refined','mape');
 
 end
@@ -258,20 +247,19 @@ function nll = nb_nll_cal(y, mu, k, wt)
     end
 
 clear; clc; close all;
-lb_11  = [-7; -7; log(8e3); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
-ub_11  = [ 2;  2; log(1e5);  4; log(5);   log(1); log(1);        log(1/12);      log(12)];
-num_A = 8;
+lb_11  = [-7; -7; log(5e4); -4; log(0.1); log(1/(7*24));log(1/(7*24)); log(1/(30*24)); log(0.1)];
+ub_11  = [ 2;  2; log(1.6e5);  4; log(5);   log(1); log(1);        log(1/12);      log(12)];
 lb_num=-7;
 un_num=+3;
-lb_p   = [lb_num;lb_num;lb_num;lb_num;lb_num;lb_num;log(0.1);-3];     % A1…A11
-ub_p   = [un_num;un_num;un_num;un_num;un_num;un_num;log(12);+3];
+lb_p   = [lb_num;lb_num;lb_num;lb_num;lb_num;lb_num;lb_num;log(0.1);-3];     
+ub_p   = [un_num;un_num;un_num;un_num;un_num;un_num;un_num;log(12);+3];
 D      = numel(lb_p);
 
 dispersion_k = 5;
 maxRestart        = 10000;
 budgetPerRestart  = 40*D*2;
 lambda            = 4 + floor(3*log(D));
-stateF            = 'cma_state_local_new_keshi_NLL.mat';
+stateF            = 'cma_state_local_new_EventC.mat';
 if isfile(stateF)
     load(stateF,"bestx","bestFit","restartID");
 else
@@ -304,7 +292,6 @@ while restartID<=maxRestart
     restartID = restartID+1;
 end
 
-fprintf('\n========= DONE =========\n');
 function nll=evaluate_stage(A_log,lb11,ub11,disp_k)
     row=A_log(:); lb=[lb11;row]; ub=[ub11;row];
     try
