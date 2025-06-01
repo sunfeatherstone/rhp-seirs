@@ -27,9 +27,9 @@ instructions are repeated below.
 
 ```text
 best_parameter/                     # best-fit parameters for each Event
-    EventC.mat
-    EventB.mat
     EventA.mat
+    EventB.mat
+    EventC.mat
 events/                           # benchmark Events (timestamps only)
     EventA_out.csv
     EventB_out.csv
