@@ -144,7 +144,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "Events/EventA_out.csv";
+    weibo_file = "events/EventA_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");

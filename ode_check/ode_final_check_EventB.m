@@ -158,8 +158,8 @@ clc;  close all;
 clear all
 format long g
 dispersion_k = 5;
-weibo_file = "Events/EventB_out.csv";
-matFile = '/Users/sunyushi/Downloads/EventB/MAPE_02.10_NLL_001385.1.mat';
+weibo_file = "events/EventB_out.csv";
+matFile = 'best_parameter/EventB.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
 theta_refined

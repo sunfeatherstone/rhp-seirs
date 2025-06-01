@@ -158,7 +158,7 @@ clc;  close all;
 clear all;
 format long g
 dispersion_k = 5;
-weibo_file = "Events/EventA_out.csv";
+weibo_file = "events/EventA_out.csv";
 matFile = 'best_parameter/EventA.mat';
 data    = load(matFile, 'theta_refined');
 theta_refined = data.theta_refined;
@@ -295,6 +295,6 @@ for k = 1:4
     exportgraphics(f,[figs{k} '.pdf'], ...
                'ContentType','vector','BackgroundColor','none')
     close all
-en
+end
 
 

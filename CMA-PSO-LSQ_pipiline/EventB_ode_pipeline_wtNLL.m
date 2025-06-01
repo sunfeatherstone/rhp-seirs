@@ -151,7 +151,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     clc;  close all;
     format long g
     dispersion_k = 5;
-    weibo_file = "Events/EventB_out.csv";
+    weibo_file = "events/EventB_out.csv";
     tbl  = readtable(weibo_file);
     bucketMin = 30;
     S = load("rhythm/preprocessed_data/weibo_spline_pp_98.mat");
@@ -237,7 +237,7 @@ function [theta_refined, t_hours, inc, cum_obs, lam_pred, cum_pred] = stagewise_
     mape = mean( abs(cum_obs - cum_pred)./max(cum_obs,eps0))*100;
     nll = nb_nll_cal(inc, lam_pred, dispersion_k);  
 
-    fn = sprintf('/Users/sunyushi/Downloads/EventB/MAPE_%05.2f_NLL_%08.1f', mape, nll);
+    fn = sprintf('MAPE_%05.2f_NLL_%08.1f', mape, nll);
     save([fn '.mat'], 'theta_refined','mape');
 
 end

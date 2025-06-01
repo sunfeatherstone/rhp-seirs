@@ -56,7 +56,6 @@ Lgrid = log10(rho_grid);
 contourf(ax, RB, RG, Lgrid, 24, 'LineColor','none'); hold(ax,'on');
 contour (ax, RB, RG, rho_grid, [1 1], 'k', 'LineWidth',2.0); 
 
-% 3) 当前点 (1,1)
 plot    (ax, 1, 1, 'r^', 'MarkerFaceColor','r','MarkerSize',8);
 
 ticks = [0.25 ,0.5,1,2, 4];          % 0.5, 0.6, 0.7, …, 2.0

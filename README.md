@@ -26,16 +26,11 @@ instructions are repeated below.
 ## 2 Directory layout
 
 ```text
-numerical_experiment/
-    generate_param_pool.m           # generate parameter combinations at one time
-    run_for_sampling.m              # load the generated parameter combination and conduct experiments
-    param_pool.csv                              
-    sampling_results.csv
 best_parameter/                     # best-fit parameters for each Event
     EventC.mat
     EventB.mat
     EventA.mat
-Events/                           # benchmark Events (timestamps only)
+events/                           # benchmark Events (timestamps only)
     EventA_out.csv
     EventB_out.csv
     EventC_out.csv
@@ -70,7 +65,7 @@ matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/EventA_ode_pipeline_w
 ```
 
 This will:
-* load Events/EventA_out.csv,
+* load events/EventA_out.csv,
 * read the rhythm baseline from rhythm/,
 * run CMA-ES → PSO → LSQ,
 * save the fitted θ to best_parameter/, and
