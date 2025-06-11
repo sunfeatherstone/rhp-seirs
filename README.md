@@ -12,7 +12,7 @@ The core resources are
 
 * **A nearly unbiased crawl of 8.7 million Weibo posts** (2020-2025)  
   *full text removed, user-IDs irreversibly randomised; precise timestamps recovered from
-IDs, max error ≤ 1 s*  
+IDs, max error ≤ 5 s*  
 * **A fitted weekly rhythm–modulation function** derived from that corpus  
 * **A CMA-ES → PSO → LSQ pipeline written in MATLAB R2024b** that calibrates a four-compartment
 RhP–SEIRS model to real Events  
@@ -55,29 +55,10 @@ sensitivity_analysis/
     sample/                         # analysis sample 
 ```
 
----
-
-## 3 Quick start — reproduce EventA in one line
-
-```bash
-# from the repository root
-matlab -batch "addpath(genpath('.')); CMA_PSO_LSQ_pipeline/EventA_ode_pipeline_wtNLL"
-```
-
-This will:
-* load events/EventA_out.csv,
-* read the rhythm baseline from rhythm/,
-* run CMA-ES → PSO → LSQ,
-* save the fitted θ to best_parameter/, and
-* plot the predicted vs. observed cumulative Event.
-
-Run the analogous script for EventB or EventC to replicate all results in the
-paper.
-
 
 ---
 
-## 4 Requirements
+## 3 Requirements
 
 software	version
 MATLAB	R2024b (earlier 2023a-2024a work but not tested exhaustively)
@@ -87,7 +68,7 @@ All MATLAB scripts are self-contained (no toolboxes beyond Statistics and Optimi
 
 ---
 
-## 5 Data provenance & privacy
+## 4 Data provenance & privacy
 * posts_uidp_part\*.parquet contains timestamps and numerical metadata only.
 Original text, screen names, profile URLs etc. have been permanently removed.
 * The column "weibo_id_rand" is a cryptographically random, one-way mapping of the original Weibo IDs.
@@ -101,21 +82,21 @@ This design satisfies the “irreversible anonymisation” requirement of China 
 
 ---
 
-## 6 How to cite
+## 5 How to cite
 
 * Code DOI  : 10.5281/zenodo.15378206   (this repository)
 * Data DOI  : 10.5281/zenodo.15378372   (all versions)
 
 ---
 
-## 7 Licence
+## 6 Licence
 * **Source code** — MIT License (see 'LICENSE')
 * **Dataset (rhythm/raw_posts_idp/ & rhythm/preprocessed_data/)** — CC BY-NC 4.0 (see 'DATA_LICENSE')
 
 ---
 
-## 8 Contact
+## 7 Contact
 
 Questions, bug reports or suggestions → Yushi Sun
-sun-yushi@outlook.com
+sun27215@outlook.com
 
