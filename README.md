@@ -53,6 +53,7 @@ sensitivity_analysis/
     ode_check_final_prcc.m
     ode_check_final_sobol_dynamic.m
     sample/                         # analysis sample 
+experiment/                         # numerical simulations
 ```
 
 
